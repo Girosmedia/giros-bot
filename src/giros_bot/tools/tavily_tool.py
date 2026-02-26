@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 CATEGORY_QUERIES: dict[str, list[str]] = {
     "Diseño Web": [
         "velocidad web móvil Chile 2025 2026 Pymes rendimiento",
-        "tendencias diseño web experiencia usuario Chile pequeñas empresas",
+        "tendencias diseño web experiencia usuario Chile pequeños Negocios",
     ],
     "E-commerce": [
         "e-commerce Chile 2025 2026 facturación electrónica SII Pymes",

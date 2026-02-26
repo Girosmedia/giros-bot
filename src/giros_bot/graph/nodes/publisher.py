@@ -1,11 +1,10 @@
 """
-Publisher_Agent — Commit MDX + imagen a GitHub + POST webhook RRSS.
+Publisher_Agent — Commit MDX + imagen a GitHub en UN SOLO COMMIT + POST webhook RRSS.
 
 Acciones:
-  1. Commit del archivo .mdx a /content/blog/{YYYY-MM}-{slug}.mdx.
-  2. Commit de la imagen a /public/blog/{slug}.jpg (si existe image_bytes_b64).
-  3. Espera (polling) hasta que la imagen esté disponible en producción.
-  4. POST webhook con payload { social_assets, image_url, post_url }.
+  1. Commit atómico (Git Trees API) con MDX + imagen juntos → 1 solo deploy.
+  2. Espera (polling) hasta que la imagen esté disponible en producción.
+  3. POST webhook con payload { social_assets, image_url, post_url }.
 """
 
 import asyncio
@@ -14,10 +13,12 @@ import logging
 from datetime import datetime
 
 import httpx
-from github import Github, GithubException
+from github import Github
 
 from ...config import settings
 from ...schemas.state import AgentState
+from ...services.social.dispatcher import social_dispatcher
+from ...services.social.base import SocialPayload
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +57,10 @@ async def _wait_for_image(image_url: str) -> bool:
 
 
 async def publisher_node(state: AgentState) -> dict:
-    """Publica el MDX + imagen en GitHub y dispara el webhook de RRSS."""
+    """Publica MDX + imagen en GitHub en UN SOLO commit atómico y dispara el webhook de RRSS."""
     results = {}
     date_prefix = datetime.strptime(state.target_date, "%Y-%m-%d").strftime("%Y-%m")
-    full_slug = f"{date_prefix}-{state.slug}"   # coincide con el nombre de archivo → URL real
+    full_slug = f"{date_prefix}-{state.slug}"
     post_url = f"https://girosmedia.cl/blog/{full_slug}"
     image_public_url = f"https://girosmedia.cl/blog/{state.slug}.jpg" if state.image_bytes_b64 else ""
 
@@ -76,51 +77,55 @@ async def publisher_node(state: AgentState) -> dict:
             state.image_alt or f"Imagen de portada para: {state.title}",
         )
 
-        # ── 1. Commit MDX ────────────────────────────────────────────────────
-        commit_msg = f"content(blog): {state.title} [{state.target_date}]"
-        try:
-            existing = repo.get_contents(mdx_path)
-            repo.update_file(
-                path=mdx_path,
-                message=commit_msg,
-                content=mdx_final,
-                sha=existing.sha,
-                branch="main",
-            )
-            logger.info("GitHub: MDX actualizado → %s", mdx_path)
-        except GithubException:
-            repo.create_file(
-                path=mdx_path,
-                message=commit_msg,
-                content=mdx_final,
-                branch="main",
-            )
-            logger.info("GitHub: MDX creado → %s", mdx_path)
+        # ── Commit atómico via Git Trees API (MDX + imagen juntos = 1 deploy) ─
+        main_ref = repo.get_git_ref("heads/main")
+        base_tree = repo.get_git_tree(main_ref.object.sha)
 
-        # ── 2. Commit imagen (si Imagen 3 la generó) ─────────────────────────
+        from github import InputGitTreeElement
+        tree_elements = []
+
+        # Elemento 1: MDX (siempre presente)
+        mdx_blob = repo.create_git_blob(mdx_final, "utf-8")
+        tree_elements.append(
+            InputGitTreeElement(
+                path=mdx_path,
+                mode="100644",
+                type="blob",
+                sha=mdx_blob.sha,
+            )
+        )
+
+        # Elemento 2: Imagen (solo si fue generada)
         if state.image_bytes_b64:
             img_bytes = base64.b64decode(state.image_bytes_b64)
-            img_commit_msg = f"assets(blog): imagen para {state.slug}"
-            try:
-                existing_img = repo.get_contents(img_path)
-                repo.update_file(
+            img_blob = repo.create_git_blob(
+                base64.b64encode(img_bytes).decode("utf-8"), "base64"
+            )
+            tree_elements.append(
+                InputGitTreeElement(
                     path=img_path,
-                    message=img_commit_msg,
-                    content=img_bytes,
-                    sha=existing_img.sha,
-                    branch="main",
+                    mode="100644",
+                    type="blob",
+                    sha=img_blob.sha,
                 )
-                logger.info("GitHub: imagen actualizada → %s", img_path)
-            except GithubException:
-                repo.create_file(
-                    path=img_path,
-                    message=img_commit_msg,
-                    content=img_bytes,
-                    branch="main",
-                )
-                logger.info("GitHub: imagen creada → %s", img_path)
+            )
         else:
             logger.warning("Publisher: sin imagen generada, el post irá sin imagen.")
+
+        new_tree = repo.create_git_tree(tree_elements, base_tree)
+        parent_commit = repo.get_git_commit(main_ref.object.sha)
+        commit_msg = f"content(blog): {state.title} [{state.target_date}]"
+        new_commit = repo.create_git_commit(
+            message=commit_msg,
+            tree=new_tree,
+            parents=[parent_commit],
+        )
+        main_ref.edit(new_commit.sha)
+        logger.info(
+            "GitHub: commit único (MDX + imagen) → %s [%s]",
+            new_commit.sha[:7],
+            mdx_path,
+        )
 
         results["image_url_generated"] = image_public_url
 
@@ -133,23 +138,20 @@ async def publisher_node(state: AgentState) -> dict:
         return results
 
     # ── 3. Webhook RRSS (espera imagen disponible primero) ──────────────────
-    if settings.social_webhook_url and state.social_assets:
-        # Esperar a que Vercel/CDN despliegue la imagen antes de llamar a Make
+    if state.social_assets:
+        # Esperar a que Vercel/CDN despliegue la imagen antes de publicar
         if image_public_url:
             await _wait_for_image(image_public_url)
 
-        payload = {
-            "social_assets": state.social_assets.model_dump(),
-            "image_url": image_public_url,
-            "post_url": post_url,
-            "image_prompt": state.image_prompt,
-        }
-        try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                response = await client.post(settings.social_webhook_url, json=payload)
-                response.raise_for_status()
-                logger.info("Webhook RRSS disparado. Status: %d", response.status_code)
-        except httpx.HTTPError as e:
-            logger.warning("Webhook RRSS falló (no crítico): %s", e)
+        payload = SocialPayload(
+            social_assets=state.social_assets,
+            image_url=image_public_url,
+            post_url=post_url,
+            image_prompt=state.image_prompt,
+            image_bytes_b64=state.image_bytes_b64
+        )
+        
+        # El dispatcher se encarga de enviar a Make.com (y futuros conectores)
+        await social_dispatcher.publish_all(payload)
 
     return results

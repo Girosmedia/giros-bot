@@ -24,8 +24,20 @@ class Settings(BaseSettings):
     github_repo_owner: str = Field(default="girosmedia")
     github_repo_name: str = Field(default="girosmedia-web-new")
 
-    # Webhooks RRSS
+    # Webhooks RRSS (Legacy Make.com)
     social_webhook_url: str = Field(default="", description="Webhook URL para distribución social")
+
+    # Meta (Facebook & Instagram)
+    meta_access_token: str = Field(default="", description="Page Access Token de larga duración")
+    facebook_page_id: str = Field(default="", description="ID de la página de Facebook")
+    instagram_account_id: str = Field(default="", description="ID de la cuenta de Instagram Business")
+
+    # LinkedIn
+    linkedin_client_id: str = Field(default="", description="Client ID de la App de LinkedIn")
+    linkedin_client_secret: str = Field(default="", description="Client Secret de la App de LinkedIn")
+    linkedin_access_token: str = Field(default="", description="OAuth 2.0 Access Token")
+    linkedin_refresh_access_token: str = Field(default="", description="OAuth 2.0 Refresh Token")
+    linkedin_author_urn: str = Field(default="", description="URN del autor (ej: urn:li:organization:123456 o urn:li:person:abcde)")
 
     # App
     app_env: str = Field(default="development")
