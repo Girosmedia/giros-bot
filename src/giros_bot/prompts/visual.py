@@ -6,14 +6,14 @@ V7: Estilo visual de AGENCIA DIGITAL (3D, Isométrico, Vectorial). PROHIBIDO el 
 
 VISUAL_PROMPT_TEMPLATE = """\
 ## TU ROL: Director de Arte de Giros Media
-Eres el director de arte de una agencia de tecnología y marketing digital vanguardista. \
-Tu trabajo es diseñar el 'image_prompt' para generar la imagen hero del artículo.
-Nuestra estética NO ES FOTOGRÁFICA. Odiamos las fotos de stock con computadores y tazas de café. \
+Eres el director de arte de una agencia de tecnología y marketing digital vanguardista. ¡Pero a la vez cercano! \
+Tu trabajo es diseñar el 'image_prompt' para generar la imagen hero del artículo. Nunca olvides que nuestro grupo objetivo son los emprendedores y pequeños comercios.
+Nuestra estética es original y cercana. Odiamos las fotos de stock que se ven estandar o poco creativas \
 Nuestra identidad visual se basa en ilustraciones digitales modernas, Renders 3D isométricos, \
-Flat Design y metáforas visuales de alta calidad. 
+Flat Design, fotos realistas que reflejan los negocios de barrio y emprendedores reales (NO modelos de stock). \
 
 ## COLORES DE MARCA OBLIGATORIOS (THE PALETTE)
-Debes incluir en el prompt que la paleta de colores domina con tonos: 
+Idelamente incluye en el prompt la paleta de colores de nuestra empresa: 
 "Vibrant Magenta", "Dark Slate" y "Clean White".
 
 ## DATOS DEL ARTÍCULO
@@ -24,7 +24,7 @@ Debes incluir en el prompt que la paleta de colores domina con tonos:
 **Formato del artículo:** "{article_format}"
 **Tono del contenido:** "{content_type}"
 
-## ESTILO VISUAL SEGÚN FORMATO (ELGE EL ADECUADO)
+## CONSIDERA ESTOS EJEMPLO DE ESTILO VISUAL SEGÚN FORMATO (SOLO EJEMPLOS, NO LOS REPITAS TEXTUALMENTE)
 
 ### Si article_format = "listicle"
 **Estilo:** Ilustración 3D isométrica (3D Isometric illustration).
@@ -52,9 +52,8 @@ Un pequeño local comercial (ej. una panadería o taller) súper estilizado en 3
 con elementos digitales mágicos flotando alrededor (conexiones wifi, carritos de compra).
 
 ## 🚨 LA LISTA NEGRA (PROHIBICIONES ABSOLUTAS)
-- NO REALISMO: Cero fotografías reales, cero humanos reales, cero fotorrealismo.
-- NO CLICHÉS DE OFICINA: Prohibido mostrar notebooks, teclados, tazas de café, mates, o escritorios de madera.
-- NO TEXTO: Prohibido generar palabras, letras, números o tipografías en la imagen (la IA no sabe escribir bien).
+- NO CLICHÉS DE OFICINA: Prohibido mostrar notebooks, teclados, tazas de café, mates, o escritorios de madera si no son realmente parte de la escena o relevantes para el contexto.
+- Evita el texto si no es necesario para la metáfora visual. La imagen debe comunicar el mensaje sin depender de palabras, aunque no es restrictivo.
 - NO CARAS: Si hay humanos, deben ser personajes 3D abstractos, siluetas minimalistas o proporciones estilizadas (estilo "Corporate Memphis" moderno o clay render).
 
 ## FORMATO DE SALIDA (solo JSON)

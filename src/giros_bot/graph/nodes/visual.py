@@ -91,7 +91,7 @@ async def visual_node(state: AgentState) -> dict:
             config=genai_types.GenerateContentConfig(
                 response_modalities=["Image"],
                 image_config=genai_types.ImageConfig(
-                    aspect_ratio="16:9",
+                    aspect_ratio="1:1",
                 ),
             ),
         )
