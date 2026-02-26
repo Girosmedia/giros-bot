@@ -52,7 +52,16 @@ async def writer_node(state: AgentState) -> dict:
         ]
     )
 
-    mdx_content = response.content.strip()
+    # response.content puede ser list[dict] con Gemini — extraer texto
+    _raw = response.content
+    mdx_content = (
+        "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in _raw
+        ).strip()
+        if isinstance(_raw, list)
+        else _raw.strip()
+    )
     # El LLM a veces envuelve el output en ```mdx ... ``` — lo eliminamos
     if mdx_content.startswith("```"):
         lines = mdx_content.split("\n")

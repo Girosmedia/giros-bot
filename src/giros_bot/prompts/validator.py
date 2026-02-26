@@ -53,6 +53,10 @@ empieza con un personaje ficticio ("María abrió...", "Don Carlos tiene...") �
 9. **FORMATO:** ¿H2 variados (no siempre "El Problema" / "La Solución")? \
 ¿Párrafos cortos (≤3 líneas)? ¿Negritas para énfasis?
 
+10. **SIN ETIQUETAS INTERNAS (CRÍTICO):** Si el texto contiene las etiquetas [KB], [TAVILY] o [INFERENCIA] \
+como texto visible en el cuerpo del artículo → penalizar 2 puntos. \
+Estas son etiquetas de trazabilidad interna del sistema y NUNCA deben aparecer en el contenido final.
+
 ## OUTPUT JSON
 {{
   "quality_score": (int 0-10),

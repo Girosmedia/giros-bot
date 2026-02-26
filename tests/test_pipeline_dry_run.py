@@ -187,6 +187,7 @@ def print_report(state: dict, elapsed: float):
         ]),
         "No pregunta retórica apertura": not mdx.split("---")[2].strip().startswith("¿") if mdx.count("---") >= 2 else False,
         "__IMAGE_ALT__ reemplazado": "__IMAGE_ALT__" not in mdx,
+        "No tags internos [KB]/[TAVILY]": all(tag not in mdx.split("---", 2)[-1] for tag in ["[KB]", "[TAVILY]", "[INFERENCIA]"]),
     }
     print("\n  Quality Checks:")
     for check, passed in checks.items():

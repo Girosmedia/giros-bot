@@ -57,7 +57,16 @@ async def visual_node(state: AgentState) -> dict:
         ]
     )
 
-    raw = response.content.strip()
+    # response.content puede ser list[dict] con Gemini — extraer texto
+    _content = response.content
+    raw = (
+        "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in _content
+        ).strip()
+        if isinstance(_content, list)
+        else _content.strip()
+    )
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

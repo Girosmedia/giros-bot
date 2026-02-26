@@ -99,7 +99,16 @@ async def scout_node(state: AgentState) -> dict:
 
     import json
 
-    raw = response.content.strip()
+    # response.content puede ser list[dict] con Gemini — extraer texto
+    _content = response.content
+    raw = (
+        "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in _content
+        ).strip()
+        if isinstance(_content, list)
+        else _content.strip()
+    )
     # Limpiar posible markdown code block
     if raw.startswith("```"):
         raw = raw.split("```")[1]

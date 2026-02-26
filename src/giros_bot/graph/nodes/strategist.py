@@ -5,6 +5,7 @@ Produce un editorial_brief adaptado al article_format elegido.
 
 import json
 import logging
+import random
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -19,17 +20,44 @@ logger = logging.getLogger(__name__)
 VALID_CATEGORIES = {cat.value for cat in FrontendCategory}
 VALID_FORMATS = {fmt.value for fmt in ArticleFormat}
 
+# Formatos con pesos para rotación ponderada.
+# listicle tiene peso menor porque el LLM tiende a elegirlo siempre.
+FORMAT_WEIGHTS = {
+    "guide": 3,
+    "comparison": 3,
+    "tips": 3,
+    "case_study": 2,
+    "listicle": 1,
+}
+
+
+def _generate_format_hint() -> str:
+    """Genera un hint de formato a evitar, ponderado para forzar diversidad.
+
+    Elige un formato 'sugerido' al azar con pesos que favorecen los formatos
+    sub-representados, y pide evitar el más sobre-representado (listicle).
+    """
+    # Elegir un formato sugerido con pesos
+    formats = list(FORMAT_WEIGHTS.keys())
+    weights = [FORMAT_WEIGHTS[f] for f in formats]
+    suggested = random.choices(formats, weights=weights, k=1)[0]
+    return f"Formato sugerido: {suggested}. Evitar: listicle (ya hay demasiados en el blog)."
+
 
 async def strategist_node(state: AgentState) -> dict:
     """Determina tópico, categoría, slug y tags para el artículo."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-flash-lite-latest",
-        temperature=0.85,   # Más creativo para encontrar dolores específicos
+        model="gemini-flash-latest",
+        temperature=1,   # Más creativo para encontrar dolores específicos
         google_api_key=settings.google_api_key,
     )
 
     # target_category viene del Scheduler (rotación semanal) — es la fuente de verdad
     target_cat = state.target_category.value if state.target_category else "Diseño Web"
+
+    # Format hint para forzar diversidad de formatos
+    format_hint = _generate_format_hint()
+    logger.info("Strategist: format_hint = %s", format_hint)
 
     prompt = STRATEGIST_PROMPT_TEMPLATE.format(
         target_date=state.target_date,
@@ -37,6 +65,7 @@ async def strategist_node(state: AgentState) -> dict:
         internal_knowledge=state.internal_knowledge[:1500],  # Más contexto para argumentos concretos
         market_context=state.market_context[:800],
         target_category=target_cat,
+        format_hint=format_hint,
     )
 
     response = await llm.ainvoke(
@@ -46,7 +75,15 @@ async def strategist_node(state: AgentState) -> dict:
         ]
     )
 
-    raw = response.content.strip()
+    # response.content puede ser list[dict] con Gemini — extraer texto
+    content = response.content
+    if isinstance(content, list):
+        raw = "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in content
+        ).strip()
+    else:
+        raw = content.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
