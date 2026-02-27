@@ -57,6 +57,8 @@ empieza con un personaje ficticio ("María abrió...", "Don Carlos tiene...") �
 como texto visible en el cuerpo del artículo → penalizar 2 puntos. \
 Estas son etiquetas de trazabilidad interna del sistema y NUNCA deben aparecer en el contenido final.
 
+Considera que solo mayor a 8 es publicado. Si es menor a 7, debe volver al writer con instrucciones claras de mejora. \
+
 ## OUTPUT JSON
 {{
   "quality_score": (int 0-10),

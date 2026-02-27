@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 
 import httpx
-from github import Github
+from github import Github, InputGitTreeElement
 
 from ...config import settings
 from ...schemas.state import AgentState
@@ -79,9 +79,9 @@ async def publisher_node(state: AgentState) -> dict:
 
         # ── Commit atómico via Git Trees API (MDX + imagen juntos = 1 deploy) ─
         main_ref = repo.get_git_ref("heads/main")
-        base_tree = repo.get_git_tree(main_ref.object.sha)
+        parent_commit = repo.get_git_commit(main_ref.object.sha)
+        base_tree_sha = parent_commit.commit.tree.sha
 
-        from github import InputGitTreeElement
         tree_elements = []
 
         # Elemento 1: MDX (siempre presente)
@@ -112,8 +112,7 @@ async def publisher_node(state: AgentState) -> dict:
         else:
             logger.warning("Publisher: sin imagen generada, el post irá sin imagen.")
 
-        new_tree = repo.create_git_tree(tree_elements, base_tree)
-        parent_commit = repo.get_git_commit(main_ref.object.sha)
+        new_tree = repo.create_git_tree(tree_elements, base_tree_sha)
         commit_msg = f"content(blog): {state.title} [{state.target_date}]"
         new_commit = repo.create_git_commit(
             message=commit_msg,
