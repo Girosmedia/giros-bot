@@ -24,6 +24,10 @@ def _make_repo_mock(ref_sha: str = "abc123") -> MagicMock:
     parent_commit.tree.sha = "tree_base_sha"
     repo.get_git_commit.return_value = parent_commit
 
+    # get_git_tree → base tree object (GitTree)
+    base_tree = MagicMock()
+    repo.get_git_tree.return_value = base_tree
+
     # create_git_blob → blob
     mdx_blob = MagicMock()
     mdx_blob.sha = "mdx_blob_sha"
@@ -69,6 +73,11 @@ def test_commit_to_github_sync_success():
 
     assert sha == repo.create_git_commit.return_value.sha
     repo.get_git_ref.assert_called_once_with("heads/main")
+    repo.get_git_tree.assert_called_once_with("tree_base_sha")
+    repo.create_git_tree.assert_called_once_with(
+        repo.create_git_tree.call_args[0][0],  # tree_elements
+        repo.get_git_tree.return_value,         # base_tree GitTree object
+    )
     repo.create_git_blob.assert_called_once()  # Solo MDX, sin imagen
     repo.get_git_ref.return_value.edit.assert_called_once_with(sha)
 

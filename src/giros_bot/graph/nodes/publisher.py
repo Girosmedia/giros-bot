@@ -107,8 +107,9 @@ def _commit_to_github_sync(
             main_ref = repo.get_git_ref("heads/main")
             parent_commit = repo.get_git_commit(main_ref.object.sha)
             base_tree_sha = parent_commit.tree.sha
+            base_tree = repo.get_git_tree(base_tree_sha)
 
-            new_tree = repo.create_git_tree(tree_elements, base_tree_sha)
+            new_tree = repo.create_git_tree(tree_elements, base_tree)
             new_commit = repo.create_git_commit(
                 message=commit_msg,
                 tree=new_tree,
