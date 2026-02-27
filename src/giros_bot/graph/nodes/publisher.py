@@ -80,7 +80,7 @@ async def publisher_node(state: AgentState) -> dict:
         # ── Commit atómico via Git Trees API (MDX + imagen juntos = 1 deploy) ─
         main_ref = repo.get_git_ref("heads/main")
         parent_commit = repo.get_git_commit(main_ref.object.sha)
-        base_tree_sha = parent_commit.commit.tree.sha
+        base_tree_sha = parent_commit.tree.sha
 
         tree_elements = []
 
