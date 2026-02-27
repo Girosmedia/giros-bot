@@ -41,14 +41,14 @@ def _generate_format_hint() -> str:
     formats = list(FORMAT_WEIGHTS.keys())
     weights = [FORMAT_WEIGHTS[f] for f in formats]
     suggested = random.choices(formats, weights=weights, k=1)[0]
-    return f"Formato sugerido: {suggested}. Evitar: listicle (ya hay demasiados en el blog)."
+    return f"Formato sugerido: {suggested}."
 
 
 async def strategist_node(state: AgentState) -> dict:
     """Determina tópico, categoría, slug y tags para el artículo."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-flash-latest",
-        temperature=1,   # Más creativo para encontrar dolores específicos
+        model="gemini-3-flash-preview",
+        temperature=1.2,   # Más creativo para encontrar dolores específicos
         google_api_key=settings.google_api_key,
     )
 

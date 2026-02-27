@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # App
     app_env: str = Field(default="development")
     log_level: str = Field(default="INFO")
+    whatsapp_business_number: str = Field(default="", description="Número de WhatsApp Business con código de país, sin signos ni espacios (ej: 56912345678)")   
 
     @property
     def is_production(self) -> bool:

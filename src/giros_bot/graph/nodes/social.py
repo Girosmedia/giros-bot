@@ -6,6 +6,7 @@ Output: state.social_assets (SocialAssets).
 
 import json
 import logging
+import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 async def social_node(state: AgentState) -> dict:
     """Genera copies para 3 redes sociales desde el artículo base."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-flash-latest",
+        model="gemini-3-flash-preview",
         temperature=0.8,
         google_api_key=settings.google_api_key,
     )
@@ -75,8 +76,13 @@ async def social_node(state: AgentState) -> dict:
     facebook = data.get("facebook_copy", "").strip()
     instagram = data.get("instagram_copy", "").strip()
 
-    linkedin_final = f"{linkedin}\n\n🔗 {post_url}"
-    facebook_final = f"{facebook}\n\n{post_url}"
+    url_pattern = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+
+    def _contains_url(text: str) -> bool:
+        return bool(url_pattern.search(text))
+
+    linkedin_final = linkedin if _contains_url(linkedin) else f"{linkedin}\n\n🔗 {post_url}"
+    facebook_final = facebook if _contains_url(facebook) else f"{facebook}\n\n{post_url}"
     # Instagram: el link va en bio, no en el copy
 
     social_assets = SocialAssets(

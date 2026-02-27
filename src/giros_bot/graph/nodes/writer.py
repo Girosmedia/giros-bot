@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 async def writer_node(state: AgentState) -> dict:
     """Genera el artículo MDX completo."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",   # Modelo potente para redacción de calidad
+        model="gemini-3-flash-preview",   # Modelo potente para redacción de calidad
         temperature=0.75,
         google_api_key=settings.google_api_key,
         max_output_tokens=8192,

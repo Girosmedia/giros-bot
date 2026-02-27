@@ -60,7 +60,7 @@ def _load_full_context() -> str:
 async def scout_node(state: AgentState) -> dict:
     """Carga KB, busca contexto web con Tavily (fallback LLM) y sintetiza con Gemini."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-flash-lite-latest",
+        model="gemini-3-flash-preview",
         temperature=0.5,
         google_api_key=settings.google_api_key,
     )

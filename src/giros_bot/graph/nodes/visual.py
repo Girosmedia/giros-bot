@@ -30,7 +30,7 @@ async def visual_node(state: AgentState) -> dict:
 
     # ── Paso 1: Generar image_prompt e image_alt con Gemini ──────────────────
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-image",
+        model="gemini-3.1-flash-image-preview",
         temperature=0.7,  # Escenas coherentes y realistas, no delirios artísticos
         google_api_key=settings.google_api_key,
     )

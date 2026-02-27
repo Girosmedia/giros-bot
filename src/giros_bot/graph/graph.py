@@ -33,15 +33,15 @@ def should_retry_or_publish(state: AgentStateDict) -> Literal["writer", "publish
     """
     Router condicional post-validación.
     retry_count se incrementa en el validator con cada pasada.
-    Si quality_score < 7 y retry_count <= MAX_RETRIES → vuelve al writer.
+    Si quality_score < 9 y retry_count <= MAX_RETRIES → vuelve al writer.
     De lo contrario → publisher (con el MDX que tenga, aunque sea imperfecto).
     """
     score = state.get("quality_score", 0)
     retries = state.get("retry_count", 0)
 
-    if score < 7 and retries <= MAX_RETRIES:
+    if score < 9 and retries <= MAX_RETRIES:
         logger.info(
-            "Validator: score=%d < 7. Retry #%d/%d → writer",
+            "Validator: score=%d < 9. Retry #%d/%d → writer",
             score, retries, MAX_RETRIES,
         )
         return "writer"
