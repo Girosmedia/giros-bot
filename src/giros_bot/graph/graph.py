@@ -12,6 +12,7 @@ import logging
 from typing import Literal
 
 from langgraph.graph import END, StateGraph
+from pydantic import BaseModel
 
 from ..schemas.state import AgentState
 from .nodes.publisher import publisher_node
@@ -67,7 +68,12 @@ async def writer_with_retry(state: AgentStateDict) -> dict:
 def _wrap(node_fn):
     """Adapta un nodo que recibe AgentState a uno que recibe AgentStateDict."""
     async def wrapper(state: AgentStateDict) -> dict:
-        agent_state = AgentState(**{k: v for k, v in state.items() if v is not None})
+        normalized_state = {
+            k: (v.model_dump() if isinstance(v, BaseModel) else v)
+            for k, v in state.items()
+            if v is not None
+        }
+        agent_state = AgentState(**normalized_state)
         return await node_fn(agent_state)
     wrapper.__name__ = node_fn.__name__
     return wrapper
@@ -134,6 +140,8 @@ async def run_pipeline(target_date: str) -> AgentStateDict:
         "tags":           [],
         "description":    "",
         "mdx_content_body": "",
+        "social_brief":   "",
+        "visual_brief":   "",
         "social_assets":  None,
         "image_prompt":   "",
         "image_alt":      "",

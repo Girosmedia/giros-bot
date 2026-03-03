@@ -1,7 +1,7 @@
 import logging
 import httpx
 
-from ...config import settings
+from giros_bot.config import settings
 from .base import ISocialPublisher, SocialPayload, PublishResult
 
 logger = logging.getLogger(__name__)

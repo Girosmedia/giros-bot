@@ -189,8 +189,14 @@ async def publisher_node(state: AgentState) -> dict:
         if image_public_url:
             await _wait_for_image(image_public_url)
 
+        social_assets_data = (
+            state.social_assets.model_dump()
+            if hasattr(state.social_assets, "model_dump")
+            else state.social_assets
+        )
+
         payload = SocialPayload(
-            social_assets=state.social_assets,
+            social_assets=social_assets_data,
             image_url=image_public_url,
             post_url=post_url,
             image_prompt=state.image_prompt,

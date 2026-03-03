@@ -25,6 +25,8 @@ class AgentStateDict(TypedDict, total=False):
     tags:               list
     description:        str
     mdx_content_body:   str
+    social_brief:       str   # Brief narrativo del artículo real → Social_Agent
+    visual_brief:       str   # Descripción de escena visual → Visual_Agent
 
     # Social
     social_assets:      Any | None   # SocialAssets

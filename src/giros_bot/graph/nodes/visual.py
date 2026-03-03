@@ -1,16 +1,11 @@
 """
-Visual_Agent — Genera el prompt, el alt text Y la imagen real con Google Imagen 3.
-
-Flujo:
-  1. Gemini genera el image_prompt (en inglés) y el image_alt (en español).
-  2. Imagen 3 genera la imagen a partir del prompt.
-  3. Los bytes de la imagen se guardan en state.image_bytes_b64 (base64).
-  4. Publisher_Agent los commitea a public/blog/{slug}.jpg en el repo del frontend.
+Visual_Agent — Genera el prompt, el alt text Y la imagen real con Gemini 3.1 Flash Image.
 """
 
 import base64
 import json
 import logging
+import re
 
 from google import genai
 from google.genai import types as genai_types
@@ -26,28 +21,31 @@ logger = logging.getLogger(__name__)
 
 
 async def visual_node(state: AgentState) -> dict:
-    """Genera prompt + alt text con Gemini, luego llama a Imagen 3 para generar la imagen."""
+    """Genera prompt + alt text con Gemini 3, luego llama a Imagen 3.1 para generar la imagen."""
 
-    # ── Paso 1: Generar image_prompt e image_alt con Gemini ──────────────────
+    # ── Paso 1: Generar image_prompt e image_alt con Gemini 3 Flash ─────────
     llm = ChatGoogleGenerativeAI(
-        model="gemini-3.1-flash-image-preview",
-        temperature=0.7,  # Escenas coherentes y realistas, no delirios artísticos
+        model="gemini-3-flash-preview", # Máximo razonamiento creativo para dirección de arte
+        temperature=1,
         google_api_key=settings.google_api_key,
     )
 
-    # Resolver content_type a texto legible
-    content_type_label = "Consejo" if state.content_type and state.content_type.value == "Consejo" else "Venta"
-
-    # Resolver article_format a texto legible
+    # Resolver labels para el prompt
+    content_type_label = "Consejo práctico" if state.content_type and state.content_type.value == "Consejo" else "Oportunidad de Negocio"
     article_format_label = state.article_format.value if state.article_format else "tips"
+
+    # Fallback: si el Writer no extrajo visual_brief, armar uno mínimo desde campos del Strategist
+    visual_brief = state.visual_brief or (
+        f"{state.editorial_brief} — {state.pain_point}"
+    ).strip(" —")
 
     prompt = VISUAL_PROMPT_TEMPLATE.format(
         title=state.title,
-        editorial_brief=state.editorial_brief,
-        pain_point=state.pain_point,
-        hero_product=state.hero_product or "Presencia Digital para Pymes",
+        visual_brief=visual_brief,
+        hero_product=state.hero_product or "Asesoría Digital Giros Media",
         content_type=content_type_label,
         article_format=article_format_label,
+        target_audience=state.target_audience,
     )
 
     response = await llm.ainvoke(
@@ -57,7 +55,7 @@ async def visual_node(state: AgentState) -> dict:
         ]
     )
 
-    # response.content puede ser list[dict] con Gemini — extraer texto
+    # Extraer JSON de la respuesta
     _content = response.content
     raw = (
         "".join(
@@ -67,26 +65,33 @@ async def visual_node(state: AgentState) -> dict:
         if isinstance(_content, list)
         else _content.strip()
     )
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
+    
+    # Limpieza de bloques de código markdown
+    if "```" in raw:
+        match = re.search(r"```(?:json)?\s*(.*?)```", raw, re.DOTALL)
+        if match:
+            raw = match.group(1).strip()
+        else:
+            raw = raw.replace("```json", "").replace("```", "").strip()
 
-    if not raw:
-        logger.error("Visual: LLM devolvió respuesta vacía. Usando fallback.")
-        raise ValueError("Visual_Agent: respuesta vacía del LLM")
-    data = json.loads(raw)
-    image_prompt = data.get("image_prompt", "")
-    image_alt = data.get("image_alt", "")
-    logger.info("Visual: prompt generado (%d chars)", len(image_prompt))
+    # Fallback values
+    image_prompt = f"A creative digital art piece about {state.title}. Vibrant magenta colors."
+    image_alt = f"Imagen ilustrativa: {state.title}"
 
-    # ── Paso 2: Llamar a gemini-2.5-flash-image (Nano Banana) ────────────
+    try:
+        data = json.loads(raw)
+        image_prompt = data.get("image_prompt", image_prompt)
+        image_alt = data.get("image_alt", image_alt)
+        logger.info("Visual: Prompt artístico generado exitosamente.")
+    except Exception as e:
+        logger.error("Visual: Error parseando JSON de Gemini: %s. Raw: %s", e, raw)
+
+    # ── Paso 2: Generar imagen real con Gemini 3.1 Flash Image ───────────────
     image_bytes_b64 = ""
     try:
         client = genai.Client(api_key=settings.google_api_key)
         imagen_response = client.models.generate_content(
-            model="gemini-2.5-flash-image",
+            model="gemini-3.1-flash-image-preview", 
             contents=[image_prompt],
             config=genai_types.GenerateContentConfig(
                 response_modalities=["Image"],
@@ -104,16 +109,12 @@ async def visual_node(state: AgentState) -> dict:
 
         if raw_bytes:
             image_bytes_b64 = base64.b64encode(raw_bytes).decode("utf-8")
-            logger.info(
-                "Visual: imagen generada con gemini-2.5-flash-image (%d bytes)",
-                len(raw_bytes),
-            )
+            logger.info("Visual: Imagen generada exitosamente (%d bytes)", len(raw_bytes))
         else:
-            logger.warning("Visual: gemini-2.5-flash-image no retornó imágenes.")
+            logger.warning("Visual: El modelo no devolvió bytes de imagen.")
 
     except Exception as e:
-        logger.warning("Visual: error al generar imagen — %s", e)
-        # No falla el pipeline; el artículo se publica sin imagen
+        logger.warning("Visual: Fallo en generación de imagen (3.1 Flash Image) — %s", e)
 
     return {
         "image_prompt":    image_prompt,

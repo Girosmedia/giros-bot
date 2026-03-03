@@ -10,7 +10,7 @@ Endpoints:
 import logging
 from datetime import date
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, APIRouter
 from pydantic import BaseModel, Field
 
 from .graph.graph import run_pipeline
@@ -24,6 +24,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Router para la V1
+v1_router = APIRouter(prefix="/v1")
 
 class RunRequest(BaseModel):
     target_date: str = Field(
@@ -31,7 +33,6 @@ class RunRequest(BaseModel):
         description="Fecha objetivo en formato YYYY-MM-DD. Default: hoy.",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
     )
-
 
 class RunResponse(BaseModel):
     target_date:    str
@@ -45,11 +46,9 @@ class RunResponse(BaseModel):
     image_prompt:   str
     error_message:  str
 
-
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "giros-autobot", "version": "1.0.0"}
-
 
 async def _run_pipeline_background(target_date: str) -> None:
     """Tarea de background: ejecuta el pipeline completo sin bloquear la respuesta HTTP."""
@@ -63,32 +62,28 @@ async def _run_pipeline_background(target_date: str) -> None:
     except Exception as e:
         logger.exception("Background pipeline falló para %s: %s", target_date, e)
 
-
-class TriggerRequest(BaseModel):
+class PostConsejosRequest(BaseModel):
     target_date: str = Field(
         default_factory=lambda: date.today().isoformat(),
         description="Fecha objetivo YYYY-MM-DD. Default: hoy.",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
     )
 
-
-@app.post("/trigger", status_code=202)
-async def trigger_pipeline(request: TriggerRequest, background_tasks: BackgroundTasks):
-    """Dispara el pipeline en background y responde 202 inmediatamente.
-    El webhook a Make se llamará solo cuando la imagen esté disponible en producción."""
-    logger.info("POST /trigger → target_date=%s", request.target_date)
+@v1_router.post("/post-consejos", status_code=202, tags=["Contenido RRSS"])
+async def post_consejos_endpoint(request: PostConsejosRequest, background_tasks: BackgroundTasks):
+    """Genera y publica contenido de consejos para RRSS en background."""
+    logger.info("POST /v1/post-consejos → target_date=%s", request.target_date)
     background_tasks.add_task(_run_pipeline_background, request.target_date)
     return {
         "status": "accepted",
         "target_date": request.target_date,
-        "message": "Pipeline iniciado en background. El webhook a Make se disparará cuando la imagen esté disponible.",
+        "message": "Pipeline de consejos iniciado en background. El proceso notificará al finalizar.",
     }
 
-
-@app.post("/run", response_model=RunResponse)
+@v1_router.post("/run", response_model=RunResponse, tags=["Admin"])
 async def run_pipeline_endpoint(request: RunRequest):
-    """Ejecuta el pipeline completo: genera y publica artículo + assets sociales."""
-    logger.info("POST /run → target_date=%s", request.target_date)
+    """Ejecuta el pipeline completo: genera y publica artículo + assets sociales (Síncrono)."""
+    logger.info("POST /v1/run → target_date=%s", request.target_date)
 
     try:
         state = await run_pipeline(request.target_date)
@@ -109,3 +104,5 @@ async def run_pipeline_endpoint(request: RunRequest):
         image_prompt=  state.get("image_prompt", ""),
         error_message= state.get("error_message", ""),
     )
+
+app.include_router(v1_router)

@@ -8,10 +8,10 @@ import logging
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from ...config import settings
-from ...prompts.system import SYSTEM_IDENTITY
-from ...prompts.validator import VALIDATOR_PROMPT_TEMPLATE
-from ...schemas.state import AgentState
+from giros_bot.config import settings
+from giros_bot.prompts.system import SYSTEM_IDENTITY
+from giros_bot.prompts.validator import VALIDATOR_PROMPT_TEMPLATE
+from giros_bot.schemas.state import AgentState
 
 logger = logging.getLogger(__name__)
 

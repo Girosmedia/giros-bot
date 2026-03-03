@@ -25,6 +25,8 @@ import time
 from datetime import date
 from pathlib import Path
 
+from giros_bot.schemas.state import FrontendCategory
+
 # ── Setup logging ────────────────────────────────────────────────────────────
 logging.basicConfig(
     level="INFO",
@@ -77,7 +79,7 @@ async def run_dry_pipeline(target_date: str) -> dict:
     initial_state = {
         "target_date":       target_date,
         "content_type":      None,
-        "target_category":   None,
+        "target_category":   FrontendCategory.DISENO_WEB, # Forzamos Diseño Web para ver diversidad
         "market_context":    "",
         "internal_knowledge": "",
         "title":             "",

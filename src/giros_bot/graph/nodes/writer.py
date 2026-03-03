@@ -4,6 +4,7 @@ Output: mdx_content_body (frontmatter + cuerpo en un solo string).
 """
 
 import logging
+import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -19,8 +20,8 @@ logger = logging.getLogger(__name__)
 async def writer_node(state: AgentState) -> dict:
     """Genera el artículo MDX completo."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-3-flash-preview",   # Modelo potente para redacción de calidad
-        temperature=0.75,
+        model="gemini-3-flash-preview",   # Máxima potencia de redacción y seguimiento de instrucciones
+        temperature=0.7,
         google_api_key=settings.google_api_key,
         max_output_tokens=8192,
     )
@@ -62,34 +63,38 @@ async def writer_node(state: AgentState) -> dict:
         if isinstance(_raw, list)
         else _raw.strip()
     )
-    # El LLM a veces envuelve el output en ```mdx ... ``` — lo eliminamos
-    if mdx_content.startswith("```"):
-        lines = mdx_content.split("\n")
-        # Quitar primera línea (```mdx o ```) y última (```)
-        if lines[-1].strip() == "```":
-            lines = lines[1:-1]
+
+    # Limpieza robusta de bloques de código markdown
+    if "```" in mdx_content:
+        # Intentamos capturar lo que hay dentro de bloques mdx o md, o simplemente el primer bloque
+        match = re.search(r"```(?:mdx|md)?\s*(.*?)```", mdx_content, re.DOTALL)
+        if match:
+            mdx_content = match.group(1).strip()
         else:
-            lines = lines[1:]
-        mdx_content = "\n".join(lines).strip()
+            # Si no hay match pero hay ```, limpiamos manualmente
+            mdx_content = mdx_content.replace("```mdx", "").replace("```md", "").replace("```", "").strip()
 
-    # Extraer el título del frontmatter para actualizar state.title
-    title = state.title
-    for line in mdx_content.split("\n"):
-        if line.startswith("title:"):
-            title = line.replace("title:", "").strip().strip('"').strip("'")
-            break
+    # Extraer metadatos del frontmatter de forma más segura
+    def extract_yaml_field(field: str, content: str, default: str) -> str:
+        pattern = rf"^{field}:\s*[\"']?(.*?)[\"']?\s*$"
+        match = re.search(pattern, content, re.MULTILINE)
+        return match.group(1).strip() if match else default
 
-    # Extraer description del frontmatter
-    description = state.description
-    for line in mdx_content.split("\n"):
-        if line.startswith("description:"):
-            description = line.replace("description:", "").strip().strip('"').strip("'")
-            break
+    title = extract_yaml_field("title", mdx_content, state.title)
+    description = extract_yaml_field("description", mdx_content, state.description)
+    social_brief = extract_yaml_field("socialBrief", mdx_content, "")
+    visual_brief = extract_yaml_field("visualBrief", mdx_content, "")
 
     logger.info("Writer completado. MDX: %d chars | title: %s", len(mdx_content), title)
+    if not social_brief:
+        logger.warning("Writer: socialBrief no encontrado en frontmatter — Social usará campos del Strategist como fallback.")
+    if not visual_brief:
+        logger.warning("Writer: visualBrief no encontrado en frontmatter — Visual usará campos del Strategist como fallback.")
 
     return {
         "mdx_content_body": mdx_content,
         "title": title,
         "description": description,
+        "social_brief": social_brief,
+        "visual_brief": visual_brief,
     }

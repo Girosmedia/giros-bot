@@ -22,24 +22,25 @@ logger = logging.getLogger(__name__)
 async def social_node(state: AgentState) -> dict:
     """Genera copies para 3 redes sociales desde el artículo base."""
     llm = ChatGoogleGenerativeAI(
-        model="gemini-3-flash-preview",
-        temperature=0.8,
+        model="gemini-3-flash-preview", # Máxima potencia de redacción y persuasión
+        temperature=0.7,
         google_api_key=settings.google_api_key,
     )
 
-    # URL final del post (debe coincidir con publisher: YYYY-MM-{slug})
+    # URL final del post
     from datetime import datetime
     date_prefix = datetime.strptime(state.target_date, "%Y-%m-%d").strftime("%Y-%m")
     post_url = f"https://girosmedia.cl/blog/{date_prefix}-{state.slug}"
 
+    # Fallback: si el Writer no extrajo social_brief, armar uno mínimo desde los campos del Strategist
+    social_brief = state.social_brief or (
+        f"{state.pain_point} {state.key_takeaway} — {state.editorial_brief}"
+    ).strip(" —")
+
     prompt = SOCIAL_PROMPT_TEMPLATE.format(
         title=state.title,
-        description=state.description,
-        pain_point=state.pain_point,
-        hook_angle=state.hook_angle,
-        key_takeaway=state.key_takeaway,
-        editorial_brief=state.editorial_brief,
-        hero_product=state.hero_product,
+        social_brief=social_brief,
+        hero_product=state.hero_product or "Asesoría Digital Giros Media",
     )
 
     response = await llm.ainvoke(
@@ -49,7 +50,7 @@ async def social_node(state: AgentState) -> dict:
         ]
     )
 
-    # response.content puede ser list[dict] con Gemini — extraer texto
+    # Extraer texto limpio
     _content = response.content
     raw = (
         "".join(
@@ -59,31 +60,35 @@ async def social_node(state: AgentState) -> dict:
         if isinstance(_content, list)
         else _content.strip()
     )
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
+    
+    # Limpieza de markdown
+    if "```" in raw:
+        import re
+        match = re.search(r"```(?:json)?\s*(.*?)```", raw, re.DOTALL)
+        if match:
+            raw = match.group(1).strip()
+        else:
+            raw = raw.replace("```json", "").replace("```", "").strip()
 
-    if not raw:
-        logger.error("Social: LLM devolvió respuesta vacía. Prompt: %s", prompt[:200])
-        raise ValueError("Social_Agent: respuesta vacía del LLM")
+    try:
+        data = json.loads(raw)
+    except Exception as e:
+        logger.error("Social: Error parseando JSON: %s. Raw: %s", e, raw)
+        raise ValueError("Social_Agent: Error en el formato de salida del LLM.")
 
-    data = json.loads(raw)
-
-    # Inyectar URL programáticamente — no depender del LLM para esto
+    # Inyectar URL programáticamente si no está presente
     linkedin = data.get("linkedin_copy", "").strip()
     facebook = data.get("facebook_copy", "").strip()
     instagram = data.get("instagram_copy", "").strip()
 
-    url_pattern = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+    def _ensure_url(text: str, url: str) -> str:
+        if url.lower() not in text.lower():
+            return f"{text}\n\n🔗 {url}"
+        return text
 
-    def _contains_url(text: str) -> bool:
-        return bool(url_pattern.search(text))
-
-    linkedin_final = linkedin if _contains_url(linkedin) else f"{linkedin}\n\n🔗 {post_url}"
-    facebook_final = facebook if _contains_url(facebook) else f"{facebook}\n\n{post_url}"
-    # Instagram: el link va en bio, no en el copy
+    linkedin_final = _ensure_url(linkedin, post_url)
+    facebook_final = _ensure_url(facebook, post_url)
+    # Instagram no lleva link en el copy (va en bio)
 
     social_assets = SocialAssets(
         linkedin_copy=linkedin_final,

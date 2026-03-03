@@ -1,25 +1,31 @@
 """
-Scheduler_Node — Determina el ContentType y la categoría para cada ejecución.
+Scheduler_Node — Determina ContentType, categoría y formato para cada ejecución.
 
-Regla ContentType (regla de negocio editorial):
-  Lunes / Miércoles / Viernes → CONSEJO (educativo, soft sell al cierre)
-  Martes / Jueves             → VENTA   (oferta directa, precio explícito)
-  Sábado / Domingo            → CONSEJO (fallback)
+Regla ContentType:
+  Siempre CONSEJO. La lógica CONSEJO/VENTA queda deprecada.
 
 Regla target_category:
-  Aleatoria en cada ejecución → garantiza variedad incluso publicando
-  2 artículos el mismo día. Odds de repetir categoría = 1/6.
+  Rotación determinista por día del año (day_of_year % 6).
+  Ciclo de 6 días cubre las 6 categorías exactamente una vez → distribución equitativa.
+  Período de repetición: 6 días.
+
+Regla article_format:
+  Rotación determinista por día del año con período primo respecto a categorías
+  (day_of_year % 5). LCM(6, 5) = 30 → 30 días antes de repetir la misma
+  combinación categoría+formato. Máxima variedad sin base de datos.
+
+Ambas rotaciones respetan overrides en el state (útil para tests y forzado manual).
 """
 
 import logging
-import random
 from datetime import datetime
 
-from ...schemas.state import AgentState, ContentType, FrontendCategory
+from ...schemas.state import AgentState, ArticleFormat, ContentType, FrontendCategory
 
 logger = logging.getLogger(__name__)
 
-CATEGORY_ROTATION = [
+# Orden fijo — índice = day_of_year % len(lista)
+CATEGORY_ROTATION: list[FrontendCategory] = [
     FrontendCategory.DISENO_WEB,
     FrontendCategory.ECOMMERCE,
     FrontendCategory.SEO_LOCAL,
@@ -28,24 +34,44 @@ CATEGORY_ROTATION = [
     FrontendCategory.CASOS_EXITO,
 ]
 
+FORMAT_ROTATION: list[ArticleFormat] = [
+    ArticleFormat.LISTICLE,
+    ArticleFormat.GUIDE,
+    ArticleFormat.COMPARISON,
+    ArticleFormat.TIPS,
+    ArticleFormat.CASE_STUDY,
+]
+
 
 async def scheduler_node(state: AgentState) -> dict:
-    """Determina content_type (día semana) y target_category (random) para esta ejecución."""
+    """Determina content_type, target_category y article_format según la fecha objetivo."""
     date_obj = datetime.strptime(state.target_date, "%Y-%m-%d")
-    weekday = date_obj.weekday()  # 0=Lunes … 6=Domingo
+    day_of_year = date_obj.timetuple().tm_yday  # 1-366
 
-    # Martes (1) y Jueves (3) → Rama VENTA
-    content_type = ContentType.VENTA if weekday in (1, 3) else ContentType.CONSEJO
+    # ── ContentType: siempre CONSEJO (VENTA deprecado) ──────────────────────
+    content_type = state.content_type or ContentType.CONSEJO
 
-    # Categoría aleatoria en cada ejecución
-    target_category = random.choice(CATEGORY_ROTATION)
+    # ── Categoría: rotación determinista, período 6 días ────────────────────
+    target_category = state.target_category or CATEGORY_ROTATION[
+        (day_of_year - 1) % len(CATEGORY_ROTATION)
+    ]
+
+    # ── Formato: rotación determinista, período 5 días (LCM con cat = 30) ───
+    article_format = state.article_format or FORMAT_ROTATION[
+        (day_of_year - 1) % len(FORMAT_ROTATION)
+    ]
 
     logger.info(
-        "Scheduler: %s (%s) → %s | categoría: %s",
+        "Scheduler: %s (%s) → %s | categoría: %s | formato: %s",
         state.target_date,
         date_obj.strftime("%A"),
         content_type.value,
         target_category.value,
+        article_format.value,
     )
 
-    return {"content_type": content_type, "target_category": target_category}
+    return {
+        "content_type":    content_type,
+        "target_category": target_category,
+        "article_format":  article_format,
+    }

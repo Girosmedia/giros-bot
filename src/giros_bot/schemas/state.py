@@ -72,6 +72,8 @@ class AgentState(BaseModel):
     tags:              list[str]                    = Field(default_factory=list)
     description:       str                          = ""
     mdx_content_body:  str                          = Field(default="", description="Frontmatter YAML + cuerpo MDX completo")
+    social_brief:      str                          = Field(default="", description="Brief narrativo del artículo real → fuente de verdad para Social_Agent")
+    visual_brief:      str                          = Field(default="", description="Descripción de escena visual del artículo → fuente de verdad para Visual_Agent")
 
     # ── Generación social (Social_Agent) ─────────────────────────────────────
     social_assets: SocialAssets | None = None
