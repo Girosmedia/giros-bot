@@ -76,11 +76,13 @@ async def visual_node(state: AgentState) -> dict:
             raw = raw.replace("```json", "").replace("```", "").strip()
 
     # Fallback values
+    visual_style = "Cinematic Realism"
     image_prompt = f"A creative digital art piece about {state.title}. Vibrant magenta colors."
     image_alt = f"Imagen ilustrativa: {state.title}"
 
     try:
         data = json.loads(raw)
+        visual_style = data.get("visual_style", visual_style)
         image_prompt = data.get("image_prompt", image_prompt)
         image_alt = data.get("image_alt", image_alt)
         logger.info("Visual: Prompt artístico generado exitosamente.")
@@ -118,6 +120,7 @@ async def visual_node(state: AgentState) -> dict:
         logger.warning("Visual: Fallo en generación de imagen (3.1 Flash Image) — %s", e)
 
     return {
+        "visual_style":    visual_style,
         "image_prompt":    image_prompt,
         "image_alt":       image_alt,
         "image_bytes_b64": image_bytes_b64,

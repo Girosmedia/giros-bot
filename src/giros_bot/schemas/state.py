@@ -88,6 +88,7 @@ class AgentState(BaseModel):
     social_assets: SocialAssets | None = None
 
     # ── Visual (Visual_Agent) ────────────────────────────────────────────────
+    visual_style:        str = Field(default="", description="Estilo visual elegido por el LLM")
     image_prompt:        str = Field(default="", description="Prompt para generador de imagen (Imagen 3)")
     image_alt:           str = ""
     image_url_generated: str = ""

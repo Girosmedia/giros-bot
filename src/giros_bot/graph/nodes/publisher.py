@@ -195,12 +195,24 @@ async def publisher_node(state: AgentState) -> dict:
             else state.social_assets
         )
 
+        from ...services.social.watermark import apply_watermark_to_b64
+        
+        watermarked_b64 = state.image_bytes_b64
+        if state.image_bytes_b64:
+            logger.info("Publisher: Aplicando marca de agua para RRSS...")
+            # We use a ThreadPool for the synchronous PIL operations to avoid blocking the event loop
+            watermarked_b64 = await asyncio.to_thread(
+                apply_watermark_to_b64,
+                state.image_bytes_b64,
+                "Recurso 4@2ximagoc.png"
+            )
+
         payload = SocialPayload(
             social_assets=social_assets_data,
             image_url=image_public_url,
             post_url=post_url,
             image_prompt=state.image_prompt,
-            image_bytes_b64=state.image_bytes_b64
+            image_bytes_b64=watermarked_b64
         )
         
         # El dispatcher se encarga de enviar a Make.com (y futuros conectores)

@@ -15,16 +15,17 @@ No es solo una foto del negocio. Es una forma de enganchar la atención del lect
 
 Puedes usar el estilo que quieras siempre que sea adecuado para el articulo que estamos ilustrando. 
 
-Algunos de los estilos son: ## CATÁLOGO DE ESTILOS
-1. **3D "Pixar/Disney" Style:** Personajes amigables en entornos de trabajo (ej: un constructor en una obra 3D mágica).
-2. **Cinematic Realism:** Fotografía hiperrealista con iluminación dramática. Ej: Una camioneta de reparto en una calle de Santiago al atardecer, una oficina de corretaje con luz de ventana intensa, una obra en construcción con chispas de soldadura.
-3. **Pop-Art / Comic Book:** Estilo con mucha actitud.
-4. **Surrealismo Corporativo:** Escenas reales con elementos gigantes. Ej: Una casa real con un pin de Google Maps gigante encima (Corretaje), un casco de construcción hecho de nodos digitales (Construcción).
-5. **Minimalist Object Composition:** Bodegones de herramientas de trabajo y tecnología.
+Algunos de los estilos son: ## CATÁLOGO DE ESTILOS VISUALES PARA RRSS (ELIGE UNO DIFERENTE AL HISTORIAL)
+1. **3D "Pixar/Disney" Style:** Personajes amigables en entornos de trabajo (ej: un constructor en una obra 3D mágica). Ideal para temas amables o inspiracionales.
+2. **Cinematic Realism:** Fotografía hiperrealista con iluminación dramática. Ej: Una camioneta de reparto al atardecer o una oficina de corretaje con luz intensa. Transmite seriedad y profesionalismo.
+3. **Pop-Art / Comic Book:** Estilo con mucha actitud, colores vibrantes y alto contraste. Excelente para destacar errores comunes o "tips ninja".
+4. **Surrealismo Corporativo:** Escenas reales con elementos gigantes. Ej: Un casco de construcción hecho de nodos digitales. Sirve para digitalización o conceptos abstractos.
+5. **Minimalist Flat Design / Vector Art:** Ilustraciones vectoriales modernas, corporativas y limpias. Genial para guías paso a paso o temas de gestión.
+6. **Isometric Tech Illustration:** Perspectiva isométrica detallada mostrando sistemas modernos. Perfecto para temas de e-commerce, SEO o software.
+7. **Papercraft / Origami Style:** Escenas y objetos tridimensionales que parecen hechos a mano con papel. Llama la atención en planificación o creatividad.
+8. **Neon Cyberpunk / Synthwave:** Colores oscuros con luces neón vibrantes. Atractivo visualmente para temas de tecnología avanzada o automatización.
 
-
-## IMPORTANTE: Estos son estilos sugeridos para darte variedad, pero no es himperativo que uses uno de esos. 
-
+## IMPORTANTE: Debes ELEGIR explícitamente uno de estos estilos (o proponer uno similar con el mismo impacto) que se adapte al tema. No repitas el último usado.
 
 ## REGLAS DE BRANDING
 - **Sin Clichés:** No a las tazas de café y manos estrechándose en oficinas blancas.
@@ -41,7 +42,8 @@ Algunos de los estilos son: ## CATÁLOGO DE ESTILOS
 
 ## FORMATO DE SALIDA (JSON ESTRICTO)
 {{
-  "image_prompt": "A [ESTILO DETALLADO 100% DIFERENTE AL HISTORIAL] representing [TU INTERPRETACIÓN SEGÚN LA AUDIENCIA]. Masterpiece, highly detailed, 8k, cinematic lighting. Color palette: [TUS COLORES]. No generic stock photos.",
+  "visual_style": "Nombre del estilo elegido (ej: Isometric Tech Illustration).",
+  "image_prompt": "A [visual_style] representing [TU INTERPRETACIÓN SEGÚN LA AUDIENCIA]. Masterpiece, highly detailed, 8k, cinematic lighting. Color palette: [TUS COLORES]. No generic stock photos.",
   "image_alt": "Descripción artística en español (máx 120 chars)."
 }}
 """

@@ -36,6 +36,7 @@ class AgentStateDict(TypedDict, total=False):
     social_assets:      Any | None   # SocialAssets
 
     # Visual
+    visual_style:       str
     image_prompt:       str
     image_alt:          str
     image_url_generated: str

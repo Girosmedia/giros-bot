@@ -17,6 +17,7 @@ class PublicationRecord(TypedDict):
     category: str
     topic: str
     format: str
+    visual_style: str
     image_prompt: str
     image_alt: str
 
@@ -34,11 +35,17 @@ def init_db() -> None:
             category TEXT NOT NULL,
             topic TEXT NOT NULL,
             format TEXT NOT NULL,
+            visual_style TEXT DEFAULT '',
             image_prompt TEXT NOT NULL,
             image_alt TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    try:
+        cursor.execute('ALTER TABLE publications ADD COLUMN visual_style TEXT DEFAULT ""')
+    except sqlite3.OperationalError:
+        pass # La columna ya existe
+    
     conn.commit()
     conn.close()
     logger.info("Base de datos de historial inicializada en %s", DB_PATH)
@@ -50,14 +57,15 @@ def save_publication(data: PublicationRecord) -> None:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO publications (target_date, slug, category, topic, format, image_prompt, image_alt)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO publications (target_date, slug, category, topic, format, visual_style, image_prompt, image_alt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data["target_date"],
             data["slug"],
             data["category"],
             data["topic"],
             data["format"],
+            data.get("visual_style", ""),
             data["image_prompt"],
             data["image_alt"]
         ))
@@ -75,7 +83,7 @@ def get_recent_history(limit: int = 10) -> list[PublicationRecord]:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT target_date, slug, category, topic, format, image_prompt, image_alt
+            SELECT target_date, slug, category, topic, format, visual_style, image_prompt, image_alt
             FROM publications
             ORDER BY target_date DESC, id DESC
             LIMIT ?
@@ -116,6 +124,7 @@ def get_visual_history_context_text(limit: int = 10) -> str:
     lines = ["## ÚLTIMAS IMÁGENES GENERADAS (ALTERNA ESTOS ESTILOS, COLORES Y ÁNGULOS)"]
     for i, rep in enumerate(history, start=1):
         lines.append(f"- Publicación '{rep['topic']}':")
+        lines.append(f"  * Estilo usado: {rep.get('visual_style', '')}")
         lines.append(f"  * Prompt usado: {rep['image_prompt']}")
         lines.append(f"  * Descripción visual (Alt): {rep['image_alt']}")
     

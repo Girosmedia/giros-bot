@@ -61,9 +61,29 @@ async def run_dry_pipeline(target_date: str) -> dict:
             "Publisher [DRY RUN]: MDX procesado (%d chars). Skipping GitHub + Webhook.",
             len(mdx_final),
         )
+
+        from giros_bot.services.social.watermark import apply_watermark_to_b64
+        
+        watermarked_b64 = state.image_bytes_b64
+        if state.image_bytes_b64:
+            logger.info("Publisher [DRY RUN]: Aplicando marca de agua para RRSS...")
+            watermarked_b64 = await asyncio.to_thread(
+                apply_watermark_to_b64,
+                state.image_bytes_b64,
+                "Recurso 4@2ximagoc.png"
+            )
+
+            # Guardar la version con marca de agua para el payload simulado (e impresion en tests/output)
+            slug = state.slug or "test"
+            watermarked_path = OUTPUT_DIR / f"{slug}_watermarked.jpg"
+            watermarked_path.write_bytes(base64.b64decode(watermarked_b64))
+            logger.info("Publisher [DRY RUN]: 💾 Imagen con marca de agua guardada → %s", watermarked_path)
+
         return {
             "mdx_content_body": mdx_final,
             "image_url_generated": f"/blog/{state.slug}.jpg",
+            # Hacemos trampa en el test actualizando el output para que print_report lo muestre
+             "image_bytes_b64": watermarked_b64
         }
 
     # Patchear publisher_node ANTES de que build_graph() lo capture con _wrap()
@@ -239,6 +259,7 @@ def print_report(state: dict, elapsed: float):
 
     # ── VISUAL ───────────────────────────────────────────────────────────
     print(separator("6. VISUAL"))
+    print(f"  Visual Style: {state.get('visual_style', '')}")
     img_prompt = state.get("image_prompt", "")
     img_alt = state.get("image_alt", "")
     img_b64 = state.get("image_bytes_b64", "")

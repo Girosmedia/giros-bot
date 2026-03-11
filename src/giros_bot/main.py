@@ -68,6 +68,7 @@ async def _run_pipeline_background(target_date: str) -> None:
                 "category": state.get("frontend_category").value if state.get("frontend_category") else "",
                 "topic": state.get("title", ""),
                 "format": state.get("article_format").value if state.get("article_format") else "",
+                "visual_style": state.get("visual_style", ""),
                 "image_prompt": state.get("image_prompt", ""),
                 "image_alt": state.get("image_alt", "")
             })
@@ -108,6 +109,7 @@ async def run_pipeline_endpoint(request: RunRequest):
                 "category": state.get("frontend_category").value if state.get("frontend_category") else "",
                 "topic": state.get("title", ""),
                 "format": state.get("article_format").value if state.get("article_format") else "",
+                "visual_style": state.get("visual_style", ""),
                 "image_prompt": state.get("image_prompt", ""),
                 "image_alt": state.get("image_alt", "")
             })
