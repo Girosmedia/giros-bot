@@ -13,7 +13,8 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Copiar solo los archivos de dependencias primero (mejor cache)
-COPY pyproject.toml uv.lock ./
+# README.md es requerido por hatchling para construir el paquete
+COPY pyproject.toml uv.lock README.md ./
 
 # Instalar dependencias en el venv
 RUN uv sync --no-dev --frozen
