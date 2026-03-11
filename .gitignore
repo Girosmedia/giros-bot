@@ -20,3 +20,9 @@ tests/output/
 
 # Knowledge base (contiene info sensible del negocio)
 knowledge_base/00_*.md
+
+# Base de datos local (no subir al repo)
+*.db
+*.sqlite
+*.sqlite3
+data/
