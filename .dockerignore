@@ -1,0 +1,44 @@
+# Control de versiones
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+wheels/
+
+# Entorno virtual local
+.venv
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Base de datos local (se monta como volumen en produccion)
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Nixpacks (no necesario con Dockerfile propio)
+.nixpacks/
+
+# Logs
+logging/
+
+# Tests
+tests/output/
+
+# Docs y archivos de desarrollo
+README.md
+*.md
+dummy.jpg
+dry_run_launcher*.py
+test_*.py
+migrate_history*.py
