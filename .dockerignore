@@ -36,8 +36,9 @@ logging/
 tests/output/
 
 # Docs y archivos de desarrollo
-README.md
+# README.md NO se excluye: hatchling lo requiere para construir el paquete
 *.md
+!README.md
 dummy.jpg
 dry_run_launcher*.py
 test_*.py
