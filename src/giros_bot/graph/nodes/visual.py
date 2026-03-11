@@ -46,6 +46,7 @@ async def visual_node(state: AgentState) -> dict:
         content_type=content_type_label,
         article_format=article_format_label,
         target_audience=state.target_audience,
+        recent_visual_context=state.recent_visual_context,
     )
 
     response = await llm.ainvoke(

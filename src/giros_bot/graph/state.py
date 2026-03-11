@@ -14,6 +14,10 @@ class AgentStateDict(TypedDict, total=False):
     content_type:       Any | None   # ContentType enum
     target_category:    Any | None   # FrontendCategory forzada por rotación semanal
 
+    # Contexto Histórico
+    recent_history_context: str
+    recent_visual_context:  str
+
     # Investigación
     market_context:     str
     internal_knowledge: str

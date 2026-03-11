@@ -29,6 +29,9 @@ Algunos de los estilos son: ## CATÁLOGO DE ESTILOS
 ## REGLAS DE BRANDING
 - **Sin Clichés:** No a las tazas de café y manos estrechándose en oficinas blancas.
 
+## CONTEXTO HISTÓRICO VISUAL (LO QUE YA HEMOS PUBLICADO)
+{recent_visual_context}
+
 ## DATOS PARA TU INSPIRACIÓN (fuente de verdad: el artículo publicado)
 - **Título:** "{title}"
 - **Escena narrativa del artículo:**
@@ -38,7 +41,7 @@ Algunos de los estilos son: ## CATÁLOGO DE ESTILOS
 
 ## FORMATO DE SALIDA (JSON ESTRICTO)
 {{
-  "image_prompt": "A [ESTILO DETALLADO] representing [TU INTERPRETACIÓN SEGÚN LA AUDIENCIA]. Masterpiece, highly detailed, 8k, cinematic lighting. Color palette: Vibrant Magenta, Dark Slate. No generic stock photos.",
+  "image_prompt": "A [ESTILO DETALLADO 100% DIFERENTE AL HISTORIAL] representing [TU INTERPRETACIÓN SEGÚN LA AUDIENCIA]. Masterpiece, highly detailed, 8k, cinematic lighting. Color palette: [TUS COLORES]. No generic stock photos.",
   "image_alt": "Descripción artística en español (máx 120 chars)."
 }}
 """

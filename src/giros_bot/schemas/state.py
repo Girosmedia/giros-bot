@@ -26,7 +26,12 @@ class FrontendCategory(StrEnum):
     SEO_LOCAL    = "SEO Local"
     MARKETING    = "Marketing Digital"
     DISENO_WEB   = "Diseño Web"
-    CASOS_EXITO  = "Casos de Éxito"
+    MENTALIDAD   = "Mentalidad Emprendedora"
+    IDENTIDAD    = "Identidad Visual"
+    TECNOLOGIA   = "Tecnología y Herramientas"
+    GESTION      = "Gestión de Pymes"
+    OPORTUNIDADES= "Oportunidades y Fondos"
+    VENTAS       = "Ventas y Fidelización"
 
 
 class ArticleFormat(StrEnum):
@@ -60,6 +65,10 @@ class AgentState(BaseModel):
     target_date:     str                    = Field(..., description="Fecha objetivo YYYY-MM-DD")
     content_type:    ContentType | None  = None
     target_category: FrontendCategory | None = Field(default=None, description="Categoría forzada por rotación semanal")
+
+    # ── Contexto Histórico ───────────────────────────────────────────────────
+    recent_history_context: str = Field(default="", description="Últimos posts publicados para el Scout y el Strategist")
+    recent_visual_context:  str = Field(default="", description="Últimas imágenes publicadas para el Visual")
 
     # ── Investigación (Scout_Agent) ──────────────────────────────────────────
     market_context:     str = Field(default="", description="Contexto chileno simulado (noticias, SII, etc.)")

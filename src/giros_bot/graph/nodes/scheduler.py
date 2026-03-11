@@ -21,17 +21,24 @@ import logging
 from datetime import datetime
 
 from ...schemas.state import AgentState, ArticleFormat, ContentType, FrontendCategory
+from ...services.history_db import get_history_context_text, get_visual_history_context_text, init_db
 
 logger = logging.getLogger(__name__)
 
 # Orden fijo — índice = day_of_year % len(lista)
+# LCM(11 categorías, 5 formatos) = 55 días para repetir una combinación exacta.
 CATEGORY_ROTATION: list[FrontendCategory] = [
     FrontendCategory.DISENO_WEB,
     FrontendCategory.ECOMMERCE,
     FrontendCategory.SEO_LOCAL,
     FrontendCategory.MARKETING,
     FrontendCategory.PRESENCIA,
-    FrontendCategory.CASOS_EXITO,
+    FrontendCategory.MENTALIDAD,
+    FrontendCategory.IDENTIDAD,
+    FrontendCategory.TECNOLOGIA,
+    FrontendCategory.GESTION,
+    FrontendCategory.OPORTUNIDADES,
+    FrontendCategory.VENTAS,
 ]
 
 FORMAT_ROTATION: list[ArticleFormat] = [
@@ -70,8 +77,15 @@ async def scheduler_node(state: AgentState) -> dict:
         article_format.value,
     )
 
+    # ── Historial: Inicializar DB si no existe y obtener contexto ───────────
+    init_db()
+    recent_history_context = get_history_context_text(limit=10)
+    recent_visual_context = get_visual_history_context_text(limit=10)
+
     return {
         "content_type":    content_type,
         "target_category": target_category,
         "article_format":  article_format,
+        "recent_history_context": recent_history_context,
+        "recent_visual_context":  recent_visual_context,
     }

@@ -14,6 +14,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, APIRouter
 from pydantic import BaseModel, Field
 
 from .graph.graph import run_pipeline
+from .services.history_db import save_publication
 
 logging.basicConfig(level="INFO", format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -59,6 +60,17 @@ async def _run_pipeline_background(target_date: str) -> None:
             "Background pipeline completado. slug=%s quality=%d",
             state.get("slug"), state.get("quality_score", 0),
         )
+        # Guardar en base de datos historial si hay slug
+        if state.get("slug"):
+            save_publication({
+                "target_date": state.get("target_date", ""),
+                "slug": state.get("slug", ""),
+                "category": state.get("frontend_category").value if state.get("frontend_category") else "",
+                "topic": state.get("title", ""),
+                "format": state.get("article_format").value if state.get("article_format") else "",
+                "image_prompt": state.get("image_prompt", ""),
+                "image_alt": state.get("image_alt", "")
+            })
     except Exception as e:
         logger.exception("Background pipeline falló para %s: %s", target_date, e)
 
@@ -87,6 +99,19 @@ async def run_pipeline_endpoint(request: RunRequest):
 
     try:
         state = await run_pipeline(request.target_date)
+        
+        # Guardar en base de datos historial
+        if state.get("slug"):
+            save_publication({
+                "target_date": state.get("target_date", ""),
+                "slug": state.get("slug", ""),
+                "category": state.get("frontend_category").value if state.get("frontend_category") else "",
+                "topic": state.get("title", ""),
+                "format": state.get("article_format").value if state.get("article_format") else "",
+                "image_prompt": state.get("image_prompt", ""),
+                "image_alt": state.get("image_alt", "")
+            })
+            
     except Exception as e:
         logger.exception("Error en pipeline")
         raise HTTPException(status_code=500, detail=str(e)) from e

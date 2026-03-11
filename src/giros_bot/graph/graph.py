@@ -132,6 +132,8 @@ async def run_pipeline(target_date: str) -> AgentStateDict:
     initial_state: AgentStateDict = {
         "target_date":    target_date,
         "content_type":   None,
+        "recent_history_context": "",
+        "recent_visual_context":  "",
         "market_context": "",
         "internal_knowledge": "",
         "title":          "",

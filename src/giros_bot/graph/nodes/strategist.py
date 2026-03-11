@@ -60,6 +60,7 @@ async def strategist_node(state: AgentState) -> dict:
         market_context=state.market_context[:2000],
         target_category=target_cat,
         format_hint=format_hint,
+        recent_history_context=state.recent_history_context,
     )
 
     response = await llm.ainvoke(

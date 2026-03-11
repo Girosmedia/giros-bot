@@ -32,6 +32,7 @@ async def scout_node(state: AgentState) -> dict:
     prompt = SCOUT_PROMPT_TEMPLATE.format(
         target_date=state.target_date,
         target_category=target_cat,
+        recent_history_context=state.recent_history_context,
     )
 
     messages = [

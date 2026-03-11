@@ -15,6 +15,9 @@ Buscamos posicionarnos como el socio experto que entiende los problemas de gesti
 - **Fecha:** {target_date}
 - **Categoría asignada:** {target_category}
 
+### CONTEXTO HISTÓRICO (LO QUE YA HEMOS PUBLICADO)
+{recent_history_context}
+
 ## TU MISIÓN (4 decisiones estratégicas)
 
 ### 1. Elige el FORMATO EDITORIAL
@@ -29,7 +32,8 @@ Elige el formato que mejor permita explicar la información encontrada por el Sc
 
 ### 2. Define un TEMA CONCRETO y un ÁNGULO DE ATAQUE
 Evita los títulos genéricos de IA. Queremos algo que un dueño de negocio en Chile lea y diga: "Esto me sirve para mi empresa/local".
-- **Diversidad:** No te limites a almacenes. Piensa en constructoras, corredoras de propiedades, distribuidoras, estudios contables, servicios técnicos, etc.
+- **Diversidad:** Revisa el "Contexto Histórico" de arriba. **PROHIBIDO** elegir un tema, dolor o ángulo que ya se haya tratado en los últimos 10 posts. Busca algo fresco que aporte variedad al blog.
+- **Audiencia:** No te limites a almacenes. Piensa en constructoras, corredoras de propiedades, distribuidoras, estudios contables, servicios técnicos, etc. Asegúrate de no repetir el mismo sector que el post anterior.
 - **Provocador:** Ataca un miedo, un gasto innecesario o una ineficiencia detectada.
 - **Ejemplos:** 
   - "Cómo una constructora en Maipú redujo sus tiempos de presupuesto digitalizándose".
