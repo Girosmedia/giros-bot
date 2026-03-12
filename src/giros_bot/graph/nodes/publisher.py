@@ -1,10 +1,13 @@
 """
-Publisher_Agent — Commit MDX + imagen a GitHub en UN SOLO COMMIT + POST webhook RRSS.
+Publisher_Agent — Commit MDX + imagen a GitHub + publicación directa en RRSS.
 
 Acciones:
-  1. Commit atómico (Git Trees API) con MDX + imagen juntos → 1 solo deploy.
-  2. Espera (polling) hasta que la imagen esté disponible en producción.
-  3. POST webhook con payload { social_assets, image_url, post_url }.
+  1. Commit atómico (Git Trees API) con MDX + imagen SIN watermark → blog web.
+  2. Aplicar watermark en memoria (imagen para RRSS).
+  3. Subir imagen con watermark a Cloudflare R2 → obtener presigned URL.
+  4. Publicar en RRSS (FB, IG, LinkedIn) usando la presigned URL y/o bytes directos.
+
+Sin polling. La publicación en RRSS es inmediata tras el commit a GitHub.
 """
 
 import asyncio
@@ -13,49 +16,16 @@ import logging
 import time
 from datetime import datetime
 
-import httpx
 from github import Github, GithubException, InputGitTreeElement
 
 from ...config import settings
-from ...schemas.state import AgentState
+from ...schemas.state import AgentState, SocialAssets
 from ...services.social.base import SocialPayload
 from ...services.social.dispatcher import social_dispatcher
 
 logger = logging.getLogger(__name__)
 
-IMAGE_POLL_RETRIES = 20    # Máximo de intentos
-IMAGE_POLL_INTERVAL = 15   # Segundos entre intentos
-_GH_REF_RETRIES = 3        # Reintentos para actualizar la ref (non-fast-forward)
-
-
-async def _wait_for_image(image_url: str) -> bool:
-    """Polling hasta que la imagen esté disponible en producción.
-    Retorna True si está disponible, False si se agotó el tiempo."""
-    full_url = f"https://girosmedia.cl{image_url}" if image_url.startswith("/") else image_url
-    logger.info("Publisher: esperando imagen en producción → %s", full_url)
-
-    async with httpx.AsyncClient(timeout=10) as client:
-        for attempt in range(1, IMAGE_POLL_RETRIES + 1):
-            try:
-                r = await client.head(full_url)
-                content_type = r.headers.get("content-type", "")
-                is_image = r.status_code == 200 and content_type.startswith("image/")
-                if is_image:
-                    logger.info("Publisher: imagen disponible (intento %d/%d)", attempt, IMAGE_POLL_RETRIES)
-                    return True
-                logger.info(
-                    "Publisher: imagen no disponible aún (HTTP %d, content-type: '%s') — intento %d/%d",
-                    r.status_code, content_type, attempt, IMAGE_POLL_RETRIES,
-                )
-            except httpx.RequestError as e:
-                logger.warning("Publisher: error al verificar imagen — %s", e)
-            await asyncio.sleep(IMAGE_POLL_INTERVAL)
-
-    logger.warning(
-        "Publisher: imagen no apareció tras %ds. Disparando webhook de todas formas.",
-        IMAGE_POLL_RETRIES * IMAGE_POLL_INTERVAL,
-    )
-    return False
+_GH_REF_RETRIES = 3  # Reintentos para actualizar la ref (non-fast-forward)
 
 
 def _commit_to_github_sync(
@@ -90,9 +60,7 @@ def _commit_to_github_sync(
 
     if image_bytes_b64:
         img_bytes = base64.b64decode(image_bytes_b64)
-        img_blob = repo.create_git_blob(
-            base64.b64encode(img_bytes).decode("utf-8"), "base64"
-        )
+        img_blob = repo.create_git_blob(base64.b64encode(img_bytes).decode("utf-8"), "base64")
         tree_elements.append(
             InputGitTreeElement(path=img_path, mode="100644", type="blob", sha=img_blob.sha)
         )
@@ -135,17 +103,40 @@ def _commit_to_github_sync(
             if attempt < _GH_REF_RETRIES:
                 time.sleep(2**attempt)  # Backoff exponencial: 2s, 4s, …
 
-    assert last_exc is not None  # El bucle siempre ejecuta al menos una iteración
+    assert last_exc is not None
     raise last_exc
 
 
+def _upload_to_r2_sync(image_bytes: bytes, filename: str) -> str:
+    """
+    Sube la imagen watermarked a Cloudflare R2 y retorna una presigned URL.
+    Operación síncrona — invocar con asyncio.to_thread().
+    """
+    from ...services.social.r2_uploader import upload_image_to_r2
+
+    return upload_image_to_r2(image_bytes, filename)
+
+
+def _cleanup_r2_sync() -> None:
+    """Limpieza lazy de imágenes antiguas en R2. Invocada en background."""
+    from ...services.social.r2_uploader import cleanup_old_social_images
+
+    cleanup_old_social_images()
+
+
 async def publisher_node(state: AgentState) -> dict:
-    """Publica MDX + imagen en GitHub en UN SOLO commit atómico y dispara el webhook de RRSS."""
+    """
+    Publica MDX + imagen (sin watermark) en GitHub y distribuye en RRSS
+    con la imagen watermarked subida directamente a Cloudflare R2.
+    No hay polling: la publicación en RRSS es inmediata.
+    """
     results = {}
     date_prefix = datetime.strptime(state.target_date, "%Y-%m-%d").strftime("%Y-%m")
     full_slug = f"{date_prefix}-{state.slug}"
     post_url = f"https://girosmedia.cl/blog/{full_slug}"
-    image_public_url = f"https://girosmedia.cl/blog/{state.slug}.jpg" if state.image_bytes_b64 else ""
+
+    # URL del CDN de Vercel — solo para referencia en logs/resultados, no se usa en RRSS
+    image_cdn_url = f"https://girosmedia.cl/blog/{state.slug}.jpg" if state.image_bytes_b64 else ""
 
     mdx_path = f"content/blog/{full_slug}.mdx"
     img_path = f"public/blog/{state.slug}.jpg"
@@ -161,9 +152,8 @@ async def publisher_node(state: AgentState) -> dict:
 
     commit_msg = f"content(blog): {state.title} [{state.target_date}]"
 
+    # ── 1. Commit atómico a GitHub (MDX + imagen SIN watermark) ────────────
     try:
-        # Ejecutar todas las llamadas síncronas de PyGithub en un hilo separado
-        # para no bloquear el event loop de asyncio.
         await asyncio.to_thread(
             _commit_to_github_sync,
             mdx_final,
@@ -172,8 +162,7 @@ async def publisher_node(state: AgentState) -> dict:
             state.image_bytes_b64 or "",
             commit_msg,
         )
-
-        results["image_url_generated"] = image_public_url
+        results["image_url_generated"] = image_cdn_url
 
         if state.social_assets:
             state.social_assets.short_url = post_url
@@ -183,39 +172,56 @@ async def publisher_node(state: AgentState) -> dict:
         results["error_message"] = f"GitHub error: {type(e).__name__}: {e}"
         return results
 
-    # ── 3. Webhook RRSS (espera imagen disponible primero) ──────────────────
-    if state.social_assets:
-        # Esperar a que Vercel/CDN despliegue la imagen antes de publicar
-        if image_public_url:
-            await _wait_for_image(image_public_url)
+    # ── 2. Publicación en RRSS ──────────────────────────────────────────────
+    if not state.social_assets:
+        logger.info("Publisher: sin social_assets, omitiendo publicación en RRSS.")
+        return results
 
-        social_assets_data = (
-            state.social_assets.model_dump()
-            if hasattr(state.social_assets, "model_dump")
-            else state.social_assets
-        )
+    # 2a. Aplicar watermark en memoria
+    watermarked_b64 = state.image_bytes_b64
+    r2_image_url = ""
 
+    if state.image_bytes_b64:
+        logger.info("Publisher: aplicando marca de agua para RRSS...")
         from ...services.social.watermark import apply_watermark_to_b64
-        
-        watermarked_b64 = state.image_bytes_b64
-        if state.image_bytes_b64:
-            logger.info("Publisher: Aplicando marca de agua para RRSS...")
-            # We use a ThreadPool for the synchronous PIL operations to avoid blocking the event loop
-            watermarked_b64 = await asyncio.to_thread(
-                apply_watermark_to_b64,
-                state.image_bytes_b64,
-                "Recurso 4@2ximagoc.png"
-            )
 
-        payload = SocialPayload(
-            social_assets=social_assets_data,
-            image_url=image_public_url,
-            post_url=post_url,
-            image_prompt=state.image_prompt,
-            image_bytes_b64=watermarked_b64
+        watermarked_b64 = await asyncio.to_thread(
+            apply_watermark_to_b64,
+            state.image_bytes_b64,
+            "Recurso 4@2ximagoc.png",
         )
-        
-        # El dispatcher se encarga de enviar a Make.com (y futuros conectores)
-        await social_dispatcher.publish_all(payload)
+
+        # 2b. Subir imagen watermarked a R2 → obtener presigned URL para FB e IG
+        try:
+            logger.info("Publisher: subiendo imagen watermarked a Cloudflare R2...")
+            watermarked_bytes = base64.b64decode(watermarked_b64)
+            r2_filename = f"{state.slug}.jpg"
+            r2_image_url = await asyncio.to_thread(
+                _upload_to_r2_sync, watermarked_bytes, r2_filename
+            )
+            logger.info("Publisher: imagen disponible en R2 (presigned URL generada).")
+
+            # 2c. Limpieza lazy de imágenes antiguas en R2 (en background, no bloquea)
+            asyncio.create_task(asyncio.to_thread(_cleanup_r2_sync))
+
+        except Exception as e:
+            logger.error(
+                "Publisher: error al subir imagen a R2 → %s: %s", type(e).__name__, e, exc_info=True
+            )
+            # No bloqueamos la publicación: LinkedIn puede continuar con bytes directos,
+            # pero FB e IG fallarán gracefully desde su propio publisher.
+
+    # 2d. Construir payload y publicar en todas las plataformas
+    # state.social_assets ya está validado como no-None por el guard de la línea 176.
+    assert isinstance(state.social_assets, SocialAssets)
+    payload = SocialPayload(
+        social_assets=state.social_assets,
+        image_url=r2_image_url,  # Presigned URL de R2 → usada por FB e IG
+        post_url=post_url,
+        image_prompt=state.image_prompt,
+        image_bytes_b64=watermarked_b64,  # Bytes con watermark → usados por LinkedIn
+    )
+
+    await social_dispatcher.publish_all(payload)
 
     return results
