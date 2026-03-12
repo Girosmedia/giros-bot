@@ -1,5 +1,4 @@
-"""
-FastAPI entrypoint — Giros Autobot V1.0
+"""FastAPI entrypoint — Giros Autobot V1.0
 
 Endpoints:
   POST /trigger      → Dispara el pipeline en background (responde 202 inmediatamente).
@@ -8,21 +7,32 @@ Endpoints:
 """
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import date
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, APIRouter
 from pydantic import BaseModel, Field
 
 from .graph.graph import run_pipeline
-from .services.history_db import save_publication
+from .services.history_db import close_db, init_db, save_publication
 
 logging.basicConfig(level="INFO", format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gestiona el ciclo de vida de la app: conecta y desconecta la BD."""
+    await init_db()
+    yield
+    await close_db()
+
 
 app = FastAPI(
     title="Giros Autobot",
     description="Sistema de generación de contenido automatizado para Giros Media SpA",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Router para la V1
@@ -62,7 +72,7 @@ async def _run_pipeline_background(target_date: str) -> None:
         )
         # Guardar en base de datos historial si hay slug
         if state.get("slug"):
-            save_publication({
+            await save_publication({
                 "target_date": state.get("target_date", ""),
                 "slug": state.get("slug", ""),
                 "category": state.get("frontend_category").value if state.get("frontend_category") else "",
@@ -103,7 +113,7 @@ async def run_pipeline_endpoint(request: RunRequest):
         
         # Guardar en base de datos historial
         if state.get("slug"):
-            save_publication({
+            await save_publication({
                 "target_date": state.get("target_date", ""),
                 "slug": state.get("slug", ""),
                 "category": state.get("frontend_category").value if state.get("frontend_category") else "",

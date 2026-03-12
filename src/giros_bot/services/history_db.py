@@ -1,131 +1,157 @@
-import json
+"""
+Capa de acceso a datos para el historial de publicaciones.
+Motor: PostgreSQL (asyncpg dialect) vía SQLAlchemy 2.0 async ORM.
+"""
+
 import logging
-import sqlite3
+from datetime import datetime
 from typing import TypedDict
-from pathlib import Path
+
+from sqlalchemy import String, Text, func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-# Asegurarse que el directorio data existe (al nivel de la raíz o fuera de src)
-# En este caso vamos a guardarlo en: /home/girosmedia/Desarrollos/Giros-bot/data
-DB_DIR = Path("/home/girosmedia/Desarrollos/Giros-bot/data")
-DB_PATH = DB_DIR / "publications.db"
+
+# ── ORM Base & Modelo ────────────────────────────────────────────────────────
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Publication(Base):
+    __tablename__ = "publications"
+
+    id:           Mapped[int]      = mapped_column(primary_key=True, autoincrement=True)
+    target_date:  Mapped[str]      = mapped_column(String(10), nullable=False)
+    slug:         Mapped[str]      = mapped_column(String(255), nullable=False)
+    category:     Mapped[str]      = mapped_column(String(100), nullable=False)
+    topic:        Mapped[str]      = mapped_column(String(500), nullable=False)
+    format:       Mapped[str]      = mapped_column(String(50), nullable=False)
+    visual_style: Mapped[str]      = mapped_column(String(100), nullable=False, default="")
+    image_prompt: Mapped[str]      = mapped_column(Text, nullable=False)
+    image_alt:    Mapped[str]      = mapped_column(String(500), nullable=False)
+    created_at:   Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+
+
+# ── Tipo público para callers ────────────────────────────────────────────────
 
 class PublicationRecord(TypedDict):
-    target_date: str
-    slug: str
-    category: str
-    topic: str
-    format: str
+    target_date:  str
+    slug:         str
+    category:     str
+    topic:        str
+    format:       str
     visual_style: str
     image_prompt: str
-    image_alt: str
+    image_alt:    str
 
 
-def init_db() -> None:
-    """Inicializa la base de datos y crea la tabla si no existe."""
-    DB_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS publications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            target_date TEXT NOT NULL,
-            slug TEXT NOT NULL,
-            category TEXT NOT NULL,
-            topic TEXT NOT NULL,
-            format TEXT NOT NULL,
-            visual_style TEXT DEFAULT '',
-            image_prompt TEXT NOT NULL,
-            image_alt TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+# ── Engine & Session factory (singletons) ────────────────────────────────────
+
+_engine = create_async_engine(settings.database_url, echo=False, pool_pre_ping=True)
+_async_session: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    _engine, expire_on_commit=False
+)
+
+
+# ── API pública ──────────────────────────────────────────────────────────────
+
+async def init_db() -> None:
+    """Crea la tabla publications si no existe. Llamar una sola vez en el lifespan de FastAPI."""
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Base de datos PostgreSQL inicializada (tabla publications lista).")
+
+
+async def close_db() -> None:
+    """Cierra el pool de conexiones. Llamar en el shutdown del lifespan."""
+    await _engine.dispose()
+    logger.info("Pool de conexiones PostgreSQL cerrado.")
+
+
+async def save_publication(data: PublicationRecord) -> None:
+    """Persiste un registro de publicación exitosa."""
     try:
-        cursor.execute('ALTER TABLE publications ADD COLUMN visual_style TEXT DEFAULT ""')
-    except sqlite3.OperationalError:
-        pass # La columna ya existe
-    
-    conn.commit()
-    conn.close()
-    logger.info("Base de datos de historial inicializada en %s", DB_PATH)
-
-
-def save_publication(data: PublicationRecord) -> None:
-    """Guarda un registro de una publicación exitosa."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO publications (target_date, slug, category, topic, format, visual_style, image_prompt, image_alt)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            data["target_date"],
-            data["slug"],
-            data["category"],
-            data["topic"],
-            data["format"],
-            data.get("visual_style", ""),
-            data["image_prompt"],
-            data["image_alt"]
-        ))
-        conn.commit()
-        conn.close()
-        logger.info("Publicación %s (%s) guardada en DB", data["slug"], data["target_date"])
+        async with _async_session() as session:
+            session.add(Publication(
+                target_date=  data["target_date"],
+                slug=         data["slug"],
+                category=     data["category"],
+                topic=        data["topic"],
+                format=       data["format"],
+                visual_style= data.get("visual_style", ""),
+                image_prompt= data["image_prompt"],
+                image_alt=    data["image_alt"],
+            ))
+            await session.commit()
+        logger.info("Publicación '%s' (%s) guardada en PostgreSQL.", data["slug"], data["target_date"])
     except Exception as e:
-        logger.error("Error al guardar en DB de historial: %s", e)
+        logger.error("Error al guardar publicación en PostgreSQL: %s", e)
 
 
-def get_recent_history(limit: int = 10) -> list[PublicationRecord]:
-    """Obtiene las últimas N publicaciones."""
+async def get_recent_history(limit: int = 10) -> list[PublicationRecord]:
+    """Retorna las últimas N publicaciones ordenadas por fecha descendente."""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT target_date, slug, category, topic, format, visual_style, image_prompt, image_alt
-            FROM publications
-            ORDER BY target_date DESC, id DESC
-            LIMIT ?
-        ''', (limit,))
-        rows = cursor.fetchall()
-        conn.close()
-        return [dict(row) for row in rows]  # Type cast Row to dict
+        async with _async_session() as session:
+            result = await session.execute(
+                select(Publication)
+                .order_by(Publication.target_date.desc(), Publication.id.desc())
+                .limit(limit)
+            )
+            rows = result.scalars().all()
+        return [
+            PublicationRecord(
+                target_date=  row.target_date,
+                slug=         row.slug,
+                category=     row.category,
+                topic=        row.topic,
+                format=       row.format,
+                visual_style= row.visual_style,
+                image_prompt= row.image_prompt,
+                image_alt=    row.image_alt,
+            )
+            for row in rows
+        ]
     except Exception as e:
-        logger.error("Error al leer de DB de historial: %s", e)
+        logger.error("Error al leer historial desde PostgreSQL: %s", e)
         return []
 
 
-def get_history_context_text(limit: int = 10) -> str:
+async def get_history_context_text(limit: int = 10) -> str:
     """
     Formatea el historial reciente para inyectarlo en Scout y Strategist.
     Ayuda a evitar repetir títulos y temas.
     """
-    history = get_recent_history(limit)
+    history = await get_recent_history(limit)
     if not history:
         return "No hay publicaciones recientes registradas aún."
-    
+
     lines = ["## ÚLTIMAS PUBLICACIONES (NO REPETIR)"]
     for i, rep in enumerate(history, start=1):
-        lines.append(f"{i}. Fecha: {rep['target_date']} | Tema: {rep['topic']} | Categoría: {rep['category']} | Formato: {rep['format']}")
-    
+        lines.append(
+            f"{i}. Fecha: {rep['target_date']} | Tema: {rep['topic']} "
+            f"| Categoría: {rep['category']} | Formato: {rep['format']}"
+        )
     return "\n".join(lines)
 
 
-def get_visual_history_context_text(limit: int = 10) -> str:
+async def get_visual_history_context_text(limit: int = 10) -> str:
     """
-    Formatea el historial reciente enfocado en lo visual para inyectarlo en el Visual_Agent.
-    Ayuda a que el agente visual cambie de estilo, colores o ángulos de composición.
+    Formatea el historial reciente enfocado en lo visual para el Visual_Agent.
+    Ayuda a alternar estilos, colores y ángulos de composición.
     """
-    history = get_recent_history(limit)
+    history = await get_recent_history(limit)
     if not history:
         return "No hay publicaciones visuales recientes registradas aún."
-    
+
     lines = ["## ÚLTIMAS IMÁGENES GENERADAS (ALTERNA ESTOS ESTILOS, COLORES Y ÁNGULOS)"]
-    for i, rep in enumerate(history, start=1):
+    for rep in history:
         lines.append(f"- Publicación '{rep['topic']}':")
-        lines.append(f"  * Estilo usado: {rep.get('visual_style', '')}")
+        lines.append(f"  * Estilo usado: {rep['visual_style']}")
         lines.append(f"  * Prompt usado: {rep['image_prompt']}")
         lines.append(f"  * Descripción visual (Alt): {rep['image_alt']}")
-    
     return "\n".join(lines)

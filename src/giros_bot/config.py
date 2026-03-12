@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     linkedin_refresh_access_token: str = Field(default="", description="OAuth 2.0 Refresh Token")
     linkedin_author_urn: str = Field(default="", description="URN del autor (ej: urn:li:organization:123456 o urn:li:person:abcde)")
 
+    # Database
+    database_url: str = Field(
+        default="postgresql+asyncpg://giros_bot:giros_bot_2026@localhost:5432/giros_bot",
+        description="SQLAlchemy async connection string para PostgreSQL",
+    )
+
     # App
     app_env: str = Field(default="development")
     log_level: str = Field(default="INFO")
