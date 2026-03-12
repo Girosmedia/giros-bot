@@ -63,7 +63,6 @@ async def social_node(state: AgentState) -> dict:
     
     # Limpieza de markdown
     if "```" in raw:
-        import re
         match = re.search(r"```(?:json)?\s*(.*?)```", raw, re.DOTALL)
         if match:
             raw = match.group(1).strip()
@@ -76,24 +75,10 @@ async def social_node(state: AgentState) -> dict:
         logger.error("Social: Error parseando JSON: %s. Raw: %s", e, raw)
         raise ValueError("Social_Agent: Error en el formato de salida del LLM.")
 
-    # Inyectar URL programáticamente si no está presente
-    linkedin = data.get("linkedin_copy", "").strip()
-    facebook = data.get("facebook_copy", "").strip()
-    instagram = data.get("instagram_copy", "").strip()
-
-    def _ensure_url(text: str, url: str) -> str:
-        if url.lower() not in text.lower():
-            return f"{text}\n\n🔗 {url}"
-        return text
-
-    linkedin_final = _ensure_url(linkedin, post_url)
-    facebook_final = _ensure_url(facebook, post_url)
-    # Instagram no lleva link en el copy (va en bio)
-
     social_assets = SocialAssets(
-        linkedin_copy=linkedin_final,
-        instagram_copy=instagram,
-        facebook_copy=facebook_final,
+        linkedin_copy=data.get("linkedin_copy", "").strip(),
+        instagram_copy=data.get("instagram_copy", "").strip(),
+        facebook_copy=data.get("facebook_copy", "").strip(),
         short_url=post_url,
     )
 
