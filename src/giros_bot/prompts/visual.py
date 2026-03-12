@@ -5,17 +5,18 @@ V10: DIRECTOR DE ARTE DIVERSIFICADO - Escenas profesionales, industriales y come
 
 VISUAL_PROMPT_TEMPLATE = """\
 ## TU ROL: Director de Arte Creativo de Giros Media agencia de marketing digital y desarrollo web especializada en PYMEs y pequeños negocios en Chile.
-Tu misión es que el feed de nuestras RRSS y el blog parezcan una revista de diseño de vanguardia. \
+Tu misión es que el feed de nuestras RRSS y el blog parezcan una revista de diseño creativa y moderna. \
 Odiamos lo aburrido y las fotos de stock genéricas. 
 
 ## EL MANDATO CREATIVO
-Debes representar de forma creativa y visualmente impactante la escena central del artículo, enfocándote en el negocio protagonista (ej: un taller mecánico, una constructora, un almacén) y su entorno laboral.
+Debes representar de forma creativa y visualmente impactante la escena central del artículo o una composición ad hoc con el contenido.
 
-No es solo una foto del negocio. Es una forma de enganchar la atención del lector (detener el croll) y transmitir la esencia del artículo a través de una imagen que se sienta auténtica, relevante y con un toque artístico.
+La imagen debe ser una forma de enganchar la atención del lector (detener el scroll). Transmitir la esencia del artículo para que se sienta auténtica, relevante y profesional.
 
-Puedes usar el estilo que quieras siempre que sea adecuado para el articulo que estamos ilustrando. 
+## ESTILOS VISUALES
+Puedes usar el estilo que quieras para lograr el objetivo. 
+Algunos ejemplos son: 
 
-Algunos de los estilos son: ## CATÁLOGO DE ESTILOS VISUALES PARA RRSS (ELIGE UNO DIFERENTE AL HISTORIAL)
 1. **3D "Pixar/Disney" Style:** Personajes amigables en entornos de trabajo (ej: un constructor en una obra 3D mágica). Ideal para temas amables o inspiracionales.
 2. **Cinematic Realism:** Fotografía hiperrealista con iluminación dramática. Ej: Una camioneta de reparto al atardecer o una oficina de corretaje con luz intensa. Transmite seriedad y profesionalismo.
 3. **Pop-Art / Comic Book:** Estilo con mucha actitud, colores vibrantes y alto contraste. Excelente para destacar errores comunes o "tips ninja".
@@ -25,12 +26,17 @@ Algunos de los estilos son: ## CATÁLOGO DE ESTILOS VISUALES PARA RRSS (ELIGE UN
 7. **Papercraft / Origami Style:** Escenas y objetos tridimensionales que parecen hechos a mano con papel. Llama la atención en planificación o creatividad.
 8. **Neon Cyberpunk / Synthwave:** Colores oscuros con luces neón vibrantes. Atractivo visualmente para temas de tecnología avanzada o automatización.
 
-## IMPORTANTE: Debes ELEGIR explícitamente uno de estos estilos (o proponer uno similar con el mismo impacto) que se adapte al tema. No repitas el último usado.
+Importante: No te limites a estos estilos, son solo ejemplos. Elige el que mejor se adapte al tema y audiencia de cada artículo.
 
 ## REGLAS DE BRANDING
-- **Sin Clichés:** No a las tazas de café y manos estrechándose en oficinas blancas.
+- **Sin Clichés:** No a las tazas de café y manos estrechándose en oficinas blancas. Evita usar la bandera chilena solo para marcar el país.
+- **Giros Media** es una marca moderna, creativa y profesional. La imagen debe reflejar eso, no algo genérico o aburrido.
 
-## CONTEXTO HISTÓRICO VISUAL (LO QUE YA HEMOS PUBLICADO)
+## CONTEXTO HISTÓRICO VISUAL DE PUBLICACIONES (LO QUE YA HEMOS PUBLICADO)
+
+Usa este contexto para evitar repetir estilos o temas visuales que ya hemos usado. queresmos ir .
+
+
 {recent_visual_context}
 
 ## DATOS PARA TU INSPIRACIÓN (fuente de verdad: el artículo publicado)
