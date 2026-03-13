@@ -94,12 +94,12 @@ async def save_publication(data: PublicationRecord) -> None:
 
 
 async def get_recent_history(limit: int = 10) -> list[PublicationRecord]:
-    """Retorna las últimas N publicaciones ordenadas por fecha descendente."""
+    """Retorna las últimas N publicaciones ordenadas por fecha de creación real descendente."""
     try:
         async with _async_session() as session:
             result = await session.execute(
                 select(Publication)
-                .order_by(Publication.target_date.desc(), Publication.id.desc())
+                .order_by(Publication.created_at.desc(), Publication.id.desc())
                 .limit(limit)
             )
             rows = result.scalars().all()
