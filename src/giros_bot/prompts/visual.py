@@ -34,10 +34,11 @@ Importante: No te limites a estos estilos, son solo ejemplos. Elige el que mejor
 
 ## CONTEXTO HISTÓRICO VISUAL DE PUBLICACIONES (LO QUE YA HEMOS PUBLICADO)
 
-Usa este contexto para evitar repetir estilos o temas visuales que ya hemos usado. queresmos ir .
-
+Usa este contexto para evitar repetir estilos o temas visuales que ya hemos usado. queresmos ir variandolos y que las publicaciones no se vean todas iguales.
 
 {recent_visual_context}
+
+## **ASEGURATE DE ROTAR EL ESTILO ARTÍSTICO. NO REPITAS LOS ÚLTIMOS ESTILOS USADOS**
 
 ## DATOS PARA TU INSPIRACIÓN (fuente de verdad: el artículo publicado)
 - **Título:** "{title}"
