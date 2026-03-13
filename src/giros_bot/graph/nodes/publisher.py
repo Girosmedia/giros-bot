@@ -188,7 +188,6 @@ async def publisher_node(state: AgentState) -> dict:
         watermarked_b64 = await asyncio.to_thread(
             apply_watermark_to_b64,
             state.image_bytes_b64,
-            "Recurso 4@2ximagoc.png",
         )
 
         # 2b. Subir imagen watermarked a R2 → obtener presigned URL para FB e IG

@@ -2,65 +2,70 @@ import base64
 import io
 import os
 import logging
+import cairosvg
 from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-def apply_watermark_to_b64(base_image_b64: str, watermark_filename: str = "Recurso 4@2ximagoc.png") -> str:
+# Ruta al logo SVG para fondo oscuro (logo reducido = texto completo)
+_LOGO_SVG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))),
+    "image", "logo-svg", "logo_reducido_para_fondo_negro.svg",
+)
+
+# Dimensiones de la banda inferior
+_BAND_COLOR  = (15, 23, 42)   # #0f172a
+_BAND_HEIGHT = 90              # px
+_LOGO_PADDING = 28             # margen derecho e interno en la banda
+
+
+def _render_svg_to_pil(svg_path: str, target_height: int) -> Image.Image:
+    """Renderiza un SVG como imagen RGBA PIL con altura fija."""
+    png_bytes = cairosvg.svg2png(url=svg_path, output_height=target_height)
+    return Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+
+
+def apply_watermark_to_b64(base_image_b64: str) -> str:
     """
-    Applies the Giros Media logo as a watermark to a base64 encoded image.
-    The watermark is placed at the bottom-right corner, sized to 25% of the image's width.
+    Aplica una banda negra (#0f172a) al pie de la imagen con el logo de
+    Giros Media centrado verticalmente y anclado al margen derecho.
 
     Args:
-        base_image_b64: Base64 encoded string of the original image.
-        watermark_filename: The filename of the logo found in the 'image' or 'image/logo-svg' directory.
-    
+        base_image_b64: Imagen original codificada en base64.
+
     Returns:
-        Base64 encoded string of the watermarked image in JPEG format, or the original if an error occurs.
+        Imagen resultante en JPEG (base64). Devuelve el original si hay error.
     """
     try:
-        # Decode base image from base64
         base_img_bytes = base64.b64decode(base_image_b64)
         base_image = Image.open(io.BytesIO(base_img_bytes)).convert("RGBA")
+        w, h = base_image.size
 
-        # Resolve watermark path
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
-        watermark_path = os.path.join(base_dir, "image", watermark_filename)
-        
-        if not os.path.exists(watermark_path):
-            watermark_path = os.path.join(base_dir, "image", "logo-svg", watermark_filename)
+        # 1. Construir banda negra del ancho total
+        band = Image.new("RGBA", (w, _BAND_HEIGHT), (*_BAND_COLOR, 255))
 
-        if not os.path.exists(watermark_path):
-            logger.warning(f"Watermark image not found at expected paths for {watermark_filename}. Skipping watermark.")
+        # 2. Renderizar logo SVG — alto = banda − 2×padding
+        logo_h = _BAND_HEIGHT - _LOGO_PADDING * 2
+        if not os.path.exists(_LOGO_SVG_PATH):
+            logger.warning("Logo SVG no encontrado: %s. Saltando watermark.", _LOGO_SVG_PATH)
             return base_image_b64
 
-        watermark = Image.open(watermark_path).convert("RGBA")
+        logo = _render_svg_to_pil(_LOGO_SVG_PATH, logo_h)
 
-        # Resize watermark: make it 25% of the image width
-        padding = 40
-        max_width = int(base_image.width * 0.25)
-        ratio = max_width / watermark.width
-        new_size = (max_width, int(watermark.height * ratio))
-        watermark = watermark.resize(new_size, Image.Resampling.LANCZOS)
+        # 3. Posicionar logo a la derecha de la banda
+        lx = w - logo.width - _LOGO_PADDING
+        ly = _LOGO_PADDING
+        band.paste(logo, (lx, ly), mask=logo)
 
-        # Calculate position (bottom_right)
-        x = base_image.width - watermark.width - padding
-        y = base_image.height - watermark.height - padding
+        # 4. Componer: sobreescribir los últimos _BAND_HEIGHT px de la imagen
+        base_image.paste(band, (0, h - _BAND_HEIGHT))
 
-        # Paste keeping original alpha of watermark
-        transparent = Image.new("RGBA", base_image.size, (0, 0, 0, 0))
-        transparent.paste(watermark, (x, y), mask=watermark)
-
-        # Composite base and transparent layer with watermark
-        watermarked = Image.alpha_composite(base_image, transparent)
-
-        # Re-encode to base64 jpeg
+        # 5. Re-codificar a JPEG base64
         output_buffer = io.BytesIO()
-        watermarked.convert("RGB").save(output_buffer, format="JPEG", quality=90)
-        watermarked_bytes = output_buffer.getvalue()
+        base_image.convert("RGB").save(output_buffer, format="JPEG", quality=90)
 
-        return base64.b64encode(watermarked_bytes).decode("utf-8")
+        return base64.b64encode(output_buffer.getvalue()).decode("utf-8")
 
     except Exception as e:
-        logger.error("Failed to apply watermark: %s: %s", type(e).__name__, e, exc_info=True)
+        logger.error("Failed to apply watermark band: %s: %s", type(e).__name__, e, exc_info=True)
         return base_image_b64
