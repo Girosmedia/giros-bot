@@ -2,27 +2,20 @@ import base64
 import io
 import os
 import logging
-import cairosvg
 from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-# Ruta al logo SVG para fondo oscuro (logo reducido = texto completo)
-_LOGO_SVG_PATH = os.path.join(
+# Logo pre-renderizado como PNG (evita dependencias de sistema cairo)
+_LOGO_PNG_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))),
-    "image", "logo-svg", "logo_reducido_para_fondo_negro.svg",
+    "image", "logo-svg", "logo_reducido_banda_negra.png",
 )
 
 # Dimensiones de la banda inferior
-_BAND_COLOR  = (15, 23, 42)   # #0f172a
-_BAND_HEIGHT = 90              # px
+_BAND_COLOR   = (15, 23, 42)  # #0f172a
+_BAND_HEIGHT  = 90             # px
 _LOGO_PADDING = 28             # margen derecho e interno en la banda
-
-
-def _render_svg_to_pil(svg_path: str, target_height: int) -> Image.Image:
-    """Renderiza un SVG como imagen RGBA PIL con altura fija."""
-    png_bytes = cairosvg.svg2png(url=svg_path, output_height=target_height)
-    return Image.open(io.BytesIO(png_bytes)).convert("RGBA")
 
 
 def apply_watermark_to_b64(base_image_b64: str) -> str:
@@ -44,13 +37,17 @@ def apply_watermark_to_b64(base_image_b64: str) -> str:
         # 1. Construir banda negra del ancho total
         band = Image.new("RGBA", (w, _BAND_HEIGHT), (*_BAND_COLOR, 255))
 
-        # 2. Renderizar logo SVG — alto = banda − 2×padding
-        logo_h = _BAND_HEIGHT - _LOGO_PADDING * 2
-        if not os.path.exists(_LOGO_SVG_PATH):
-            logger.warning("Logo SVG no encontrado: %s. Saltando watermark.", _LOGO_SVG_PATH)
+        # 2. Cargar logo PNG y escalar a la altura de la banda
+        if not os.path.exists(_LOGO_PNG_PATH):
+            logger.warning("Logo PNG no encontrado: %s. Saltando watermark.", _LOGO_PNG_PATH)
             return base_image_b64
 
-        logo = _render_svg_to_pil(_LOGO_SVG_PATH, logo_h)
+        logo_h = _BAND_HEIGHT - _LOGO_PADDING * 2
+        logo_raw = Image.open(_LOGO_PNG_PATH).convert("RGBA")
+        ratio = logo_h / logo_raw.height
+        logo = logo_raw.resize(
+            (int(logo_raw.width * ratio), logo_h), Image.Resampling.LANCZOS
+        )
 
         # 3. Posicionar logo a la derecha de la banda
         lx = w - logo.width - _LOGO_PADDING

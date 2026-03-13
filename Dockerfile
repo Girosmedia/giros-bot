@@ -1,15 +1,8 @@
 FROM python:3.12-slim
 
 # Instalar dependencias del sistema
-# libcairo2 + libpango* son requeridas por cairosvg para renderizar SVG
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
-    libffi-dev \
-    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Variables de entorno para Python
