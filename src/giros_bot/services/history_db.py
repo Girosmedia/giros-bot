@@ -142,16 +142,30 @@ async def get_history_context_text(limit: int = 10) -> str:
 async def get_visual_history_context_text(limit: int = 10) -> str:
     """
     Formatea el historial reciente enfocado en lo visual para el Visual_Agent.
-    Ayuda a alternar estilos, colores y ángulos de composición.
+    Ayuda a alternar estilos, sujetos y ángulos de composición.
+    Devuelve sólo estilo y alt (no el prompt completo) para no anclar al LLM
+    a los mismos arquetipos de sujeto.
     """
     history = await get_recent_history(limit)
     if not history:
         return "No hay publicaciones visuales recientes registradas aún."
 
-    lines = ["## ÚLTIMAS IMÁGENES GENERADAS (ALTERNA ESTOS ESTILOS, COLORES Y ÁNGULOS)"]
+    # Los últimos 3 estilos quedan explícitamente BLOQUEADOS
+    blocked_styles = [rep["visual_style"] for rep in history[:3] if rep.get("visual_style")]
+
+    lines = []
+    if blocked_styles:
+        lines.append(f"🚫 ESTILOS BLOQUEADOS PARA ESTA PUBLICACIÓN (últimos 3 usados): {' | '.join(blocked_styles)}")
+        lines.append("Elige un estilo diferente a los anteriores.")
+        lines.append("")
+
+    lines.append("## HISTORIAL RECIENTE (estilo → sujeto/escena representada):")
     for rep in history:
-        lines.append(f"- Publicación '{rep['topic']}':")
-        lines.append(f"  * Estilo usado: {rep['visual_style']}")
-        lines.append(f"  * Prompt usado: {rep['image_prompt']}")
-        lines.append(f"  * Descripción visual (Alt): {rep['image_alt']}")
+        date_str = rep["target_date"]
+        style = rep.get("visual_style") or "sin estilo"
+        alt = rep.get("image_alt") or "sin descripción"
+        lines.append(f"- [{date_str}] {style} → {alt}")
+
+    lines.append("")
+    lines.append("Analiza los sujetos del historial y varía: género, edad, tipo de negocio, y si hay persona o no.")
     return "\n".join(lines)
