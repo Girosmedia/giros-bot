@@ -24,7 +24,12 @@ def test_frontend_category_values():
         "SEO Local",
         "Marketing Digital",
         "Diseño Web",
-        "Casos de Éxito",
+        "Mentalidad Emprendedora",
+        "Identidad Visual",
+        "Tecnología y Herramientas",
+        "Gestión de Pymes",
+        "Oportunidades y Fondos",
+        "Ventas y Fidelización",
     }
     actual = {cat.value for cat in FrontendCategory}
     assert actual == expected

@@ -91,10 +91,10 @@ async def test_scheduler_misma_fecha_mismo_resultado():
 async def test_scheduler_respeta_override_categoria():
     state = AgentState(
         target_date="2026-02-23",
-        target_category=FrontendCategory.CASOS_EXITO,
+        target_category=FrontendCategory.MARKETING,
     )
     result = await scheduler_node(state)
-    assert result["target_category"] == FrontendCategory.CASOS_EXITO
+    assert result["target_category"] == FrontendCategory.MARKETING
 
 
 @pytest.mark.asyncio

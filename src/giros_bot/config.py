@@ -71,9 +71,51 @@ class Settings(BaseSettings):
         description="Número de WhatsApp Business con código de país, sin signos ni espacios (ej: 56912345678)",
     )
 
+    # WhatsApp Cloud API
+    whatsapp_phone_number_id: str = Field(
+        default="",
+        description="ID del número de teléfono en Meta Business Manager",
+    )
+    whatsapp_verify_token: str = Field(
+        default="giros_webhook_verify_2026",
+        description="Token de verificación del webhook (GET challenge de Meta)",
+    )
+    whatsapp_api_token: str = Field(
+        default="",
+        description="Bearer token para Meta Graph API (mismo o distinto que meta_access_token)",
+    )
+    whatsapp_api_version: str = Field(
+        default="v21.0",
+        description="Versión de Meta Graph API",
+    )
+
+    # Agendamiento (proveedor-agnóstico)
+    scheduling_url: str = Field(
+        default="",
+        description="URL de agenda (Calendly, Google Cal Appointments, etc.)",
+    )
+    scheduling_provider: str = Field(
+        default="calendly",
+        description="Proveedor de agenda: 'calendly' | 'google_calendar'",
+    )
+
+    # Leads
+    lead_notification_email: str = Field(
+        default="",
+        description="Email para notificar nuevos leads (placeholder — próxima iteración)",
+    )
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def whatsapp_api_url(self) -> str:
+        """URL base para envío de mensajes en Meta Graph API."""
+        return (
+            f"https://graph.facebook.com/{self.whatsapp_api_version}"
+            f"/{self.whatsapp_phone_number_id}/messages"
+        )
 
 
 @lru_cache(maxsize=1)

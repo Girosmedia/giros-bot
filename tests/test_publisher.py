@@ -215,15 +215,9 @@ async def test_publisher_node_success_sets_image_url():
         image_bytes_b64=img_b64,
     )
 
-    with (
-        patch(
-            "src.giros_bot.graph.nodes.publisher._commit_to_github_sync",
-            return_value="deadbeef" * 5,
-        ),
-        patch(
-            "src.giros_bot.graph.nodes.publisher._wait_for_image",
-            return_value=False,
-        ),
+    with patch(
+        "src.giros_bot.graph.nodes.publisher._commit_to_github_sync",
+        return_value="deadbeef" * 5,
     ):
         result = await publisher_node(state)
 
