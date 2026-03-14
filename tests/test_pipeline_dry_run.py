@@ -62,7 +62,7 @@ async def run_dry_pipeline(target_date: str) -> dict:
             len(mdx_final),
         )
 
-        from giros_bot.services.social.watermark import apply_watermark_to_b64
+        from giros_bot.publication.services.social.watermark import apply_watermark_to_b64
         
         watermarked_b64 = state.image_bytes_b64
         if state.image_bytes_b64:
@@ -87,7 +87,7 @@ async def run_dry_pipeline(target_date: str) -> dict:
         }
 
     # Patchear publisher_node ANTES de que build_graph() lo capture con _wrap()
-    import giros_bot.graph.graph as graph_module
+    import giros_bot.publication.graph as graph_module
     original_publisher = graph_module.publisher_node
 
     graph_module.publisher_node = mock_publisher

@@ -16,9 +16,9 @@ import pytest
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from src.giros_bot.schemas.whatsapp_state import TriageIntent, WhatsAppState
-from src.giros_bot.services.lead_capture import LeadData
-from src.giros_bot.services.scheduling import SchedulingResult
+from src.giros_bot.whatsapp.state import TriageIntent, WhatsAppState
+from src.giros_bot.whatsapp.services.lead_capture import LeadData
+from src.giros_bot.whatsapp.services.scheduling import SchedulingResult
 
 # ── Mock services ─────────────────────────────────────────────────────────────
 
@@ -65,10 +65,10 @@ async def test_triage_classifies_tendo():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.triage_node._llm",
+        "src.giros_bot.whatsapp.nodes.triage_node._llm",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.triage_node import triage_node
+        from src.giros_bot.whatsapp.nodes.triage_node import triage_node
 
         state: WhatsAppState = {
             "messages": [HumanMessage(content="Necesito controlar el stock de mi almacén")],
@@ -100,10 +100,10 @@ async def test_triage_classifies_servicios():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.triage_node._llm",
+        "src.giros_bot.whatsapp.nodes.triage_node._llm",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.triage_node import triage_node
+        from src.giros_bot.whatsapp.nodes.triage_node import triage_node
 
         state: WhatsAppState = {
             "messages": [HumanMessage(content="Quiero una página web para mi empresa")],
@@ -133,10 +133,10 @@ async def test_triage_classifies_agendar():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.triage_node._llm",
+        "src.giros_bot.whatsapp.nodes.triage_node._llm",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.triage_node import triage_node
+        from src.giros_bot.whatsapp.nodes.triage_node import triage_node
 
         state: WhatsAppState = {
             "messages": [HumanMessage(content="Quiero agendar una reunión con el equipo")],
@@ -163,10 +163,10 @@ async def test_triage_fallback_on_invalid_json():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.triage_node._llm",
+        "src.giros_bot.whatsapp.nodes.triage_node._llm",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.triage_node import triage_node
+        from src.giros_bot.whatsapp.nodes.triage_node import triage_node
 
         state: WhatsAppState = {
             "messages": [HumanMessage(content="Hola")],
@@ -202,10 +202,10 @@ async def test_cotizacion_servicios_no_price_in_response():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.cotizacion_servicios_agent._llm_with_tools",
+        "src.giros_bot.whatsapp.nodes.cotizacion_servicios_agent._llm_with_tools",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.cotizacion_servicios_agent import (
+        from src.giros_bot.whatsapp.nodes.cotizacion_servicios_agent import (
             cotizacion_servicios_agent,
         )
 
@@ -245,10 +245,10 @@ async def test_cotizacion_tendo_mentions_price():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.cotizacion_tendo_agent._llm_with_tools",
+        "src.giros_bot.whatsapp.nodes.cotizacion_tendo_agent._llm_with_tools",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.cotizacion_tendo_agent import (
+        from src.giros_bot.whatsapp.nodes.cotizacion_tendo_agent import (
             cotizacion_tendo_agent,
         )
 
@@ -281,10 +281,10 @@ async def test_reserva_agent_uses_mock_scheduling_service():
     mock_llm.ainvoke = AsyncMock(return_value=mock_llm_response)
 
     with patch(
-        "src.giros_bot.graph.nodes.whatsapp.reserva_agent._llm_with_tools",
+        "src.giros_bot.whatsapp.nodes.reserva_agent._llm_with_tools",
         new=mock_llm,
     ):
-        from src.giros_bot.graph.nodes.whatsapp.reserva_agent import reserva_agent
+        from src.giros_bot.whatsapp.nodes.reserva_agent import reserva_agent
 
         state: WhatsAppState = {
             "messages": [HumanMessage(content="Quiero agendar una reunión")],
@@ -308,7 +308,7 @@ def test_whatsapp_payload_rejects_non_wa_object():
     """Payload con object='page' debe fallar la validación."""
     from pydantic import ValidationError
 
-    from src.giros_bot.schemas.whatsapp import WhatsAppWebhookPayload
+    from src.giros_bot.whatsapp.schemas import WhatsAppWebhookPayload
 
     with pytest.raises(ValidationError):
         WhatsAppWebhookPayload(
@@ -319,7 +319,7 @@ def test_whatsapp_payload_rejects_non_wa_object():
 
 def test_whatsapp_payload_parses_correctly():
     """Payload correcto debe parsearse sin errores."""
-    from src.giros_bot.schemas.whatsapp import WhatsAppWebhookPayload
+    from src.giros_bot.whatsapp.schemas import WhatsAppWebhookPayload
 
     payload = WhatsAppWebhookPayload(
         **{

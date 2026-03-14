@@ -13,8 +13,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.giros_bot.main import app
-from src.giros_bot.services.lead_capture import LeadData
-from src.giros_bot.services.scheduling import SchedulingResult
+from src.giros_bot.whatsapp.services.lead_capture import LeadData
+from src.giros_bot.whatsapp.services.scheduling import SchedulingResult
 
 # ── Mocks de servicios ────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import logging
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from ..services.messaging import IMessagingService
+from ..whatsapp.services.messaging import IMessagingService
 
 logger = logging.getLogger(__name__)
 

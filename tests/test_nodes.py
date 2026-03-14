@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.giros_bot.graph.nodes.scheduler import (
+from src.giros_bot.publication.nodes.scheduler import (
     CATEGORY_ROTATION,
     FORMAT_ROTATION,
     scheduler_node,

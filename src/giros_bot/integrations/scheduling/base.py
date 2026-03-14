@@ -1,10 +1,3 @@
-"""Re-exports SchedulingResult desde services.scheduling.
+"""Compat wrapper. Use giros_bot.whatsapp.integrations.scheduling.base."""
 
-Las implementaciones concretas (CalendlyScheduler, GoogleCalendarScheduler)
-importan desde aquí para que el tipo coincida exactamente con el definido
-en el Protocol ISchedulingService — evitando el error de tipo duplicado.
-"""
-
-from ...services.scheduling import SchedulingResult
-
-__all__ = ["SchedulingResult"]
+from ...whatsapp.integrations.scheduling.base import *  # noqa: F401,F403

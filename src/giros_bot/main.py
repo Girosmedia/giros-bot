@@ -15,13 +15,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from .config import settings
-from .graph.graph import run_pipeline
-from .graph.whatsapp_graph import build_whatsapp_graph
-from .integrations.lead import PostgresLeadCapture
-from .integrations.scheduling import CalendlyScheduler, GoogleCalendarScheduler
-from .integrations.whatsapp_api import WhatsAppAPIMessaging
-from .routers.whatsapp import router as whatsapp_router
-from .services.history_db import close_db, init_db, save_publication
+from .publication.graph import run_pipeline
+from .whatsapp.graph import build_whatsapp_graph
+from .whatsapp.integrations.lead import PostgresLeadCapture
+from .whatsapp.integrations.scheduling import CalendlyScheduler, GoogleCalendarScheduler
+from .whatsapp.integrations.whatsapp_api import WhatsAppAPIMessaging
+from .whatsapp.router import router as whatsapp_router
+from .publication.services.history_db import close_db, init_db, save_publication
 
 logging.basicConfig(level="INFO", format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)

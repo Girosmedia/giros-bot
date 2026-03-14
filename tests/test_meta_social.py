@@ -6,11 +6,11 @@ from pathlib import Path
 # Añadir el directorio src al path para poder importar los módulos
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from giros_bot.services.social.base import SocialPayload
+from giros_bot.publication.services.social.base import SocialPayload
 from giros_bot.schemas.state import SocialAssets
-from giros_bot.services.social.facebook import FacebookPublisher
-from giros_bot.services.social.instagram import InstagramPublisher
-from giros_bot.services.social.linkedin import LinkedInPublisher
+from giros_bot.publication.services.social.facebook import FacebookPublisher
+from giros_bot.publication.services.social.instagram import InstagramPublisher
+from giros_bot.publication.services.social.linkedin import LinkedInPublisher
 
 # Configurar logging para ver los resultados en consola
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

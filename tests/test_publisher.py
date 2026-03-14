@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from github import GithubException
 
-from src.giros_bot.graph.nodes.publisher import _commit_to_github_sync, publisher_node
+from src.giros_bot.publication.nodes.publisher import _commit_to_github_sync, publisher_node
 from src.giros_bot.schemas.state import AgentState
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,8 +55,8 @@ def test_commit_to_github_sync_success():
     repo = _make_repo_mock()
 
     with (
-        patch("src.giros_bot.graph.nodes.publisher.Github") as MockGithub,
-        patch("src.giros_bot.graph.nodes.publisher.settings") as mock_settings,
+        patch("src.giros_bot.publication.nodes.publisher.Github") as MockGithub,
+        patch("src.giros_bot.publication.nodes.publisher.settings") as mock_settings,
     ):
         mock_settings.github_token = "fake_token"
         mock_settings.github_repo_owner = "owner"
@@ -96,8 +96,8 @@ def test_commit_to_github_sync_includes_image_blob():
     repo.create_git_blob.side_effect = [blob1, blob2]
 
     with (
-        patch("src.giros_bot.graph.nodes.publisher.Github") as MockGithub,
-        patch("src.giros_bot.graph.nodes.publisher.settings") as mock_settings,
+        patch("src.giros_bot.publication.nodes.publisher.Github") as MockGithub,
+        patch("src.giros_bot.publication.nodes.publisher.settings") as mock_settings,
     ):
         mock_settings.github_token = "fake_token"
         mock_settings.github_repo_owner = "owner"
@@ -124,9 +124,9 @@ def test_commit_retries_on_non_fast_forward():
     repo.get_git_ref.return_value.edit.side_effect = [exc, exc, None]
 
     with (
-        patch("src.giros_bot.graph.nodes.publisher.Github") as MockGithub,
-        patch("src.giros_bot.graph.nodes.publisher.settings") as mock_settings,
-        patch("src.giros_bot.graph.nodes.publisher.time.sleep"),  # No esperar en tests
+        patch("src.giros_bot.publication.nodes.publisher.Github") as MockGithub,
+        patch("src.giros_bot.publication.nodes.publisher.settings") as mock_settings,
+        patch("src.giros_bot.publication.nodes.publisher.time.sleep"),  # No esperar en tests
     ):
         mock_settings.github_token = "fake_token"
         mock_settings.github_repo_owner = "owner"
@@ -148,16 +148,16 @@ def test_commit_retries_on_non_fast_forward():
 
 def test_commit_raises_after_all_retries_exhausted():
     """Si todos los reintentos fallan, se propaga la última GithubException."""
-    from src.giros_bot.graph.nodes.publisher import _GH_REF_RETRIES
+    from src.giros_bot.publication.nodes.publisher import _GH_REF_RETRIES
 
     repo = _make_repo_mock()
     exc = GithubException(422, {"message": "Update is not a fast forward"}, {})
     repo.get_git_ref.return_value.edit.side_effect = exc
 
     with (
-        patch("src.giros_bot.graph.nodes.publisher.Github") as MockGithub,
-        patch("src.giros_bot.graph.nodes.publisher.settings") as mock_settings,
-        patch("src.giros_bot.graph.nodes.publisher.time.sleep"),
+        patch("src.giros_bot.publication.nodes.publisher.Github") as MockGithub,
+        patch("src.giros_bot.publication.nodes.publisher.settings") as mock_settings,
+        patch("src.giros_bot.publication.nodes.publisher.time.sleep"),
     ):
         mock_settings.github_token = "fake_token"
         mock_settings.github_repo_owner = "owner"
@@ -190,7 +190,7 @@ async def test_publisher_node_github_error_sets_error_message():
     )
 
     with patch(
-        "src.giros_bot.graph.nodes.publisher._commit_to_github_sync",
+        "src.giros_bot.publication.nodes.publisher._commit_to_github_sync",
         side_effect=GithubException(401, {"message": "Bad credentials"}, {}),
     ):
         result = await publisher_node(state)
@@ -216,7 +216,7 @@ async def test_publisher_node_success_sets_image_url():
     )
 
     with patch(
-        "src.giros_bot.graph.nodes.publisher._commit_to_github_sync",
+        "src.giros_bot.publication.nodes.publisher._commit_to_github_sync",
         return_value="deadbeef" * 5,
     ):
         result = await publisher_node(state)
@@ -244,7 +244,7 @@ async def test_publisher_node_replaces_image_alt_placeholder():
         return "sha" * 10
 
     with patch(
-        "src.giros_bot.graph.nodes.publisher._commit_to_github_sync",
+        "src.giros_bot.publication.nodes.publisher._commit_to_github_sync",
         side_effect=capture_mdx,
     ):
         await publisher_node(state)
